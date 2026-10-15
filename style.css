@@ -315,6 +315,95 @@ body.role-guest .client-account-bar {
     color: var(--text-muted);
 }
 
+/* ==================== ОЧЕРЕДЬ И СЛЕДУЮЩАЯ МАШИНА ПОД БОКСОМ ==================== */
+.box-queue-section {
+    margin-top: 0.75rem;
+    padding-top: 0.65rem;
+    border-top: 1px dashed var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    text-align: left;
+}
+
+.box-queue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.badge-queued {
+    background: #fef3c7;
+    color: #b45309;
+    padding: 0.15rem 0.45rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.box-queue-item {
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.box-queue-item.box-queue-item-secondary {
+    opacity: 0.85;
+}
+
+.box-queue-item-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+}
+
+.box-queue-plate {
+    font-weight: 800;
+    font-size: 0.85rem;
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.box-queue-model {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-main);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.box-queue-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.box-queue-actions {
+    display: flex;
+    gap: 0.35rem;
+    margin-top: 0.2rem;
+}
+
+.box-queue-actions .btn {
+    flex: 1;
+}
+
 /* ==================== ГАРАЖ КЛИЕНТА ==================== */
 .garage-cards-grid {
     display: grid;
@@ -418,6 +507,47 @@ body.role-guest .client-account-bar {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+}
+
+/* ==================== ФИЛЬТРЫ ЗАЯВОК И ЛИСТ ОЖИДАНИЯ ==================== */
+.filter-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+}
+
+.pill-filter-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 0.35rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pill-filter-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.pill-filter-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.waitlist-header-badge {
+    background: #f3e8ff;
+    color: #6b21a8;
+    padding: 0.4rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border: 1px solid #e9d5ff;
 }
 
 /* ==================== СТАТУС-ПИЛЛЫ ==================== */
@@ -707,6 +837,13 @@ body.role-guest .client-account-bar {
 .btn-sm {
     padding: 0.35rem 0.75rem;
     font-size: 0.8rem;
+}
+
+.btn-xs {
+    padding: 0.22rem 0.55rem;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    line-height: 1.2;
 }
 
 .btn-link {

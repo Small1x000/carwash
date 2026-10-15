@@ -16,6 +16,12 @@
 const STORAGE_KEY = 'carwash_tracker_secure_v2';
 const LEGACY_STORAGE_KEY = 'carwash_tracker_db_v1';
 const CLIENT_SESSION_KEY = 'carwash_client_session_v1';
+const STAFF_SESSION_KEY = 'carwash_staff_session_v2';
+const ACTIVE_TAB_KEY = 'carwash_active_tab_v1';
+
+// Базовый URL облачной синхронизации Firebase (единая база для всех устройств, телефонов и клиентов)
+// Укажите здесь URL вашей базы (например: 'https://my-carwash-rtdb.firebaseio.com')
+const DEFAULT_FIREBASE_URL = '';
 
 // Категории кузова и коэффициенты
 const CATEGORY_MULTIPLIERS = {
@@ -99,17 +105,17 @@ class CarWashApp {
         const loaded = this.loadDatabase();
         if (!loaded) return;
 
+        this.loadStaffSession(); // Восстанавливаем сохраненную сессию Владельца / Администратора / Мойщика
         this.loadClientSession();
         this.initDOM();
         this.initMultiTabSync();
         this.initCloudSync();
         this.applyRoleUI();
 
-        // Проверка первого запуска (если пароли еще не установлены)
-        if (!this.db.auth || !this.db.auth.ownerHash) {
-            this.showFirstRunModal();
-        }
+        // Клиенты и гости сайта НЕ должны видеть окно первоначальной настройки.
+        // Окно настройки открывается ТОЛЬКО при явной попытке входа в режим Владельца.
 
+        this.restoreLastActiveTab();
         this.renderAll();
     }
 
@@ -119,8 +125,8 @@ class CarWashApp {
         return {
             version: 2,
             cloud: {
-                enabled: false,
-                firebaseUrl: ''
+                enabled: Boolean(DEFAULT_FIREBASE_URL),
+                firebaseUrl: DEFAULT_FIREBASE_URL || ''
             },
             contacts: {
                 address: 'ул. Автомобильная, 12/1',
@@ -186,7 +192,11 @@ class CarWashApp {
                 if (!this.db.contacts.hours || this.db.contacts.hours.includes('08:00') || this.db.contacts.hours.includes('23:00')) {
                     this.db.contacts.hours = 'Круглосуточно 24/7 (без перерывов и выходных)';
                 }
-                if (!this.db.cloud) this.db.cloud = { enabled: false, firebaseUrl: '' };
+                if (!this.db.cloud) this.db.cloud = { enabled: Boolean(DEFAULT_FIREBASE_URL), firebaseUrl: DEFAULT_FIREBASE_URL || '' };
+                if (DEFAULT_FIREBASE_URL && !this.db.cloud.firebaseUrl) {
+                    this.db.cloud.firebaseUrl = DEFAULT_FIREBASE_URL;
+                    this.db.cloud.enabled = true;
+                }
 
                 // Гарантируем наличие всех 10 боксов
                 if (this.db.boxes.length < 10) {
@@ -230,35 +240,83 @@ class CarWashApp {
         }
     }
 
+    loadStaffSession() {
+        try {
+            const stored = localStorage.getItem(STAFF_SESSION_KEY);
+            if (stored) {
+                const session = JSON.parse(stored);
+                if (session && session.role && session.expiresAt && Date.now() < session.expiresAt) {
+                    this.currentRole = session.role;
+                    this.sessionRole = session.role;
+                    this.currentAdminId = session.adminId || null;
+                    this.currentWorkerId = session.workerId || null;
+                    this.sessionToken = session.sessionToken || Security.generateId();
+                    this.sessionExpires = session.expiresAt;
+                    return true;
+                } else {
+                    localStorage.removeItem(STAFF_SESSION_KEY);
+                }
+            }
+        } catch (e) {
+            console.warn('Ошибка загрузки сессии персонала', e);
+        }
+        return false;
+    }
+
+    saveStaffSession() {
+        try {
+            if (this.currentRole && this.currentRole !== 'guest' && this.sessionExpires > Date.now()) {
+                const sessionData = {
+                    role: this.currentRole,
+                    adminId: this.currentAdminId,
+                    workerId: this.currentWorkerId,
+                    sessionToken: this.sessionToken,
+                    expiresAt: this.sessionExpires
+                };
+                localStorage.setItem(STAFF_SESSION_KEY, JSON.stringify(sessionData));
+            } else {
+                localStorage.removeItem(STAFF_SESSION_KEY);
+            }
+        } catch (e) {}
+    }
+
     loadClientSession() {
         try {
-            const stored = localStorage.getItem(CLIENT_SESSION_KEY);
+            // Очищаем устаревший глобальный ключ в localStorage во избежание утечки чужого профиля
+            try { localStorage.removeItem(CLIENT_SESSION_KEY); } catch (e) {}
+
+            const stored = sessionStorage.getItem(CLIENT_SESSION_KEY);
             if (stored) {
                 const data = JSON.parse(stored);
                 if (data && data.id) {
                     const found = (this.db.clients || []).find(c => c.id === data.id);
                     this.currentClient = found || data;
+                    return;
                 }
             }
+            this.currentClient = null;
         } catch (e) {
             console.warn('Ошибка загрузки сессии клиента', e);
+            this.currentClient = null;
         }
     }
 
     saveClientSession(client) {
-        this.currentClient = client;
-        if (client) {
-            try {
+        this.currentClient = client || null;
+        try {
+            // Гарантированно удаляем из постоянного localStorage
+            localStorage.removeItem(CLIENT_SESSION_KEY);
+            if (client && client.id) {
                 const sessionData = {
                     id: client.id,
                     name: client.name,
                     phone: client.phone
                 };
-                localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(sessionData));
-            } catch (e) {}
-        } else {
-            localStorage.removeItem(CLIENT_SESSION_KEY);
-        }
+                sessionStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(sessionData));
+            } else {
+                sessionStorage.removeItem(CLIENT_SESSION_KEY);
+            }
+        } catch (e) {}
     }
 
     saveDatabase() {
@@ -342,6 +400,9 @@ class CarWashApp {
                     if (Array.isArray(cloudData.bookings)) this.db.bookings = cloudData.bookings;
                     if (Array.isArray(cloudData.admins) && cloudData.admins.length > 0) this.db.admins = cloudData.admins;
                     if (cloudData.contacts) this.db.contacts = cloudData.contacts;
+                    if (cloudData.auth && cloudData.auth.ownerHash) {
+                        this.db.auth = cloudData.auth;
+                    }
                     this.db.lastCloudUpdate = cloudData.updatedAt;
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.db));
                     this.renderAll();
@@ -366,6 +427,7 @@ class CarWashApp {
                 clients: this.db.clients || [],
                 bookings: this.db.bookings || [],
                 admins: (this.db.admins || []).map(a => ({ id: a.id, name: a.name })),
+                auth: this.db.auth || null,
                 updatedAt: Date.now()
             };
             this.db.lastCloudUpdate = payload.updatedAt;
@@ -414,6 +476,8 @@ class CarWashApp {
             this.currentRole = 'guest';
             this.sessionToken = null;
             this.sessionRole = 'guest';
+            this.saveStaffSession();
+            try { localStorage.removeItem(ACTIVE_TAB_KEY); } catch (e) {}
             this.applyRoleUI();
             alert('Сессия истекла. Пожалуйста, выполните вход заново.');
             return false;
@@ -449,6 +513,7 @@ class CarWashApp {
         this.sessionToken = Security.generateId();
         this.sessionExpires = Date.now() + (12 * 60 * 60 * 1000); // 12 часов
         this.failedAttempts = 0;
+        this.saveStaffSession();
         this.applyRoleUI();
         this.closeAuthModal();
         this.renderAll();
@@ -479,6 +544,10 @@ class CarWashApp {
     // Модальное окно первого запуска
     showFirstRunModal() {
         document.getElementById('firstRunModal').classList.add('open');
+    }
+
+    closeFirstRunModal() {
+        document.getElementById('firstRunModal').classList.remove('open');
     }
 
     async submitInitialSetup(event) {
@@ -537,6 +606,10 @@ class CarWashApp {
         this.sessionRole = 'guest';
         this.currentWorkerId = null;
         this.currentAdminId = null;
+        this.sessionToken = null;
+        this.sessionExpires = 0;
+        this.saveStaffSession();
+        try { localStorage.removeItem(ACTIVE_TAB_KEY); } catch (e) {}
         this.applyRoleUI();
         this.closeAuthModal();
         this.renderAll();
@@ -665,6 +738,14 @@ class CarWashApp {
 
     showOwnerLoginForm() {
         if (this.checkBruteForceLockout()) return;
+
+        // Если пароль владельца еще не был установлен в системе, предлагаем первичную настройку
+        if (!this.db.auth || !this.db.auth.ownerHash) {
+            this.closeAuthModal();
+            this.showFirstRunModal();
+            return;
+        }
+
         document.getElementById('ownerPasswordBlock').style.display = 'block';
         document.getElementById('workerSelectBlock').style.display = 'none';
         document.getElementById('adminPasswordBlock').style.display = 'none';
@@ -822,7 +903,7 @@ class CarWashApp {
             return;
         }
 
-        if (['newOrder', 'activeOrders', 'history', 'adminBookings'].includes(tabId) && !['admin', 'owner'].includes(this.sessionRole)) {
+        if (['newOrder', 'activeOrders', 'history', 'adminBookings', 'adminWaitlist'].includes(tabId) && !['admin', 'owner'].includes(this.sessionRole)) {
             alert('Этот раздел доступен только Администратору или Владельцу.');
             return;
         }
@@ -835,6 +916,13 @@ class CarWashApp {
             content.classList.toggle('active', content.id === `tab-${tabId}`);
         });
 
+        try {
+            // Сохраняем активную вкладку только для персонала (Владелец, Админ, Мойщик)
+            if (this.currentRole !== 'guest') {
+                localStorage.setItem(ACTIVE_TAB_KEY, tabId);
+            }
+        } catch (e) {}
+
         if (tabId === 'guestBooking') {
             this.populateBookingCarDropdown();
             this.renderBookingServicesCheckboxes();
@@ -843,6 +931,7 @@ class CarWashApp {
         }
         if (tabId === 'guestCars') this.renderClientGarage();
         if (tabId === 'adminBookings') this.renderAdminBookings();
+        if (tabId === 'adminWaitlist') this.renderAdminWaitlist();
         if (tabId === 'finance') this.renderFinance();
         if (tabId === 'history') this.renderHistory();
         if (tabId === 'activeOrders') {
@@ -854,6 +943,39 @@ class CarWashApp {
         if (tabId === 'guestSearch') this.renderGuestBoxesOverview();
         if (tabId === 'guestPrices') this.renderGuestPrices();
         if (tabId === 'settings') this.renderSettings();
+    }
+
+    restoreLastActiveTab() {
+        try {
+            // Для клиентов и посетителей ВСЕГДА открывается главная страница онлайн-записи
+            if (this.currentRole === 'guest') {
+                this.switchTab('guestBooking');
+                return;
+            }
+
+            const savedTab = localStorage.getItem(ACTIVE_TAB_KEY);
+            if (savedTab) {
+                if (['finance', 'settings'].includes(savedTab) && this.sessionRole !== 'owner') {
+                    this.switchTab('activeOrders');
+                    return;
+                }
+                if (['newOrder', 'activeOrders', 'history', 'adminBookings', 'adminWaitlist'].includes(savedTab) && !['admin', 'owner'].includes(this.sessionRole)) {
+                    this.switchTab('workerTasks');
+                    return;
+                }
+                if (['workerTasks', 'workerHistory'].includes(savedTab) && this.currentRole !== 'worker') {
+                    this.switchTab('activeOrders');
+                    return;
+                }
+                this.switchTab(savedTab);
+            } else {
+                if (this.currentRole === 'worker') {
+                    this.switchTab('workerTasks');
+                } else {
+                    this.switchTab('activeOrders');
+                }
+            }
+        } catch (e) {}
     }
 
     // ==================== МАСКА И ФОРМАТИРОВАНИЕ НОМЕРА ТЕЛЕФОНА ====================
@@ -1001,6 +1123,7 @@ class CarWashApp {
         this.renderGuestBookings();
         this.renderClientGarage();
         this.renderAdminBookings();
+        this.renderAdminWaitlist();
         this.renderBoxesAndSelects();
         this.renderServicesCheckboxes();
         this.renderActiveOrders();
@@ -1108,6 +1231,13 @@ class CarWashApp {
         this.saveDatabase();
         this.saveClientSession(newClient);
         this.closeClientAuthModal();
+
+        const bookingNameEl = document.getElementById('bookingClientName');
+        const bookingPhoneEl = document.getElementById('bookingClientPhone');
+        if (bookingNameEl) bookingNameEl.value = newClient.name;
+        if (bookingPhoneEl) bookingPhoneEl.value = newClient.phone;
+
+        this.populateBookingCarDropdown();
         this.renderAll();
         alert(`🎉 Добро пожаловать, ${name}! Личный кабинет успешно создан.`);
     }
@@ -1141,14 +1271,30 @@ class CarWashApp {
 
         this.saveClientSession(client);
         this.closeClientAuthModal();
+
+        const bookingNameEl = document.getElementById('bookingClientName');
+        const bookingPhoneEl = document.getElementById('bookingClientPhone');
+        if (bookingNameEl) bookingNameEl.value = client.name;
+        if (bookingPhoneEl) bookingPhoneEl.value = client.phone;
+
+        this.populateBookingCarDropdown();
         this.renderAll();
         alert(`✅ С возвращением, ${client.name}!`);
     }
 
     logoutClient() {
         this.saveClientSession(null);
+        try { sessionStorage.removeItem('carwash_guest_last_phone'); } catch (e) {}
+
+        const bookingNameEl = document.getElementById('bookingClientName');
+        const bookingPhoneEl = document.getElementById('bookingClientPhone');
+        if (bookingNameEl) bookingNameEl.value = '';
+        if (bookingPhoneEl) bookingPhoneEl.value = '';
+
+        this.populateBookingCarDropdown();
+        this.switchTab('guestBooking');
         this.renderAll();
-        alert('Вы вышли из личного кабинета.');
+        alert('Вы вышли из личного кабинета. Открыта главная страница онлайн-записи.');
     }
 
     renderClientBar() {
@@ -1173,7 +1319,7 @@ class CarWashApp {
             if (actionsEl) {
                 actionsEl.innerHTML = `
                     <button class="btn btn-outline btn-sm" type="button" onclick="app.switchTab('guestCars')">🚗 Гараж (${carCount})</button>
-                    <button class="btn btn-outline btn-sm" type="button" onclick="app.logoutClient()" style="margin-left:0.5rem; color:#ef4444; border-color:#fecaca;">Выйти</button>
+                    <button class="btn btn-outline btn-sm" type="button" onclick="app.logoutClient()" style="margin-left:0.5rem; color:#ef4444; border-color:#fecaca;" title="Сменить аккаунт или выйти">🚪 Выйти / Сменить акк</button>
                 `;
             }
             if (bookingNameEl && !bookingNameEl.value) bookingNameEl.value = this.currentClient.name;
@@ -1537,7 +1683,8 @@ class CarWashApp {
 
         if (!this.currentClient) {
             try {
-                localStorage.setItem('carwash_guest_last_phone', formattedPhone);
+                localStorage.removeItem('carwash_guest_last_phone');
+                sessionStorage.setItem('carwash_guest_last_phone', formattedPhone);
             } catch (e) {}
         }
 
@@ -1554,7 +1701,15 @@ class CarWashApp {
         container.innerHTML = '';
 
         const bookings = Array.isArray(this.db.bookings) ? this.db.bookings : [];
-        const clientPhone = this.currentClient ? this.currentClient.phone : (localStorage.getItem('carwash_guest_last_phone') || '');
+        let clientPhone = '';
+        if (this.currentClient) {
+            clientPhone = this.currentClient.phone;
+        } else {
+            try {
+                localStorage.removeItem('carwash_guest_last_phone');
+                clientPhone = sessionStorage.getItem('carwash_guest_last_phone') || '';
+            } catch (e) {}
+        }
 
         const myBookings = bookings.filter(b => {
             if (this.currentClient && b.clientId === this.currentClient.id) return true;
@@ -1638,17 +1793,47 @@ class CarWashApp {
 
     // ==================== УПРАВЛЕНИЕ БРОНЯМИ (АДМИНИСТРАТОР) ====================
 
+    setBookingsFilter(filterName) {
+        const select = document.getElementById('adminBookingStatusFilter');
+        if (select) {
+            select.value = filterName;
+        }
+        this.renderAdminBookings();
+    }
+
+    onBookingFilterSelectChange() {
+        this.renderAdminBookings();
+    }
+
     renderAdminBookings() {
         const container = document.getElementById('adminBookingsContainer');
         const badge = document.getElementById('pendingBookingsCount');
+        const waitlistBadge = document.getElementById('waitlistCount');
+        const waitlistTotalBadge = document.getElementById('waitlistTotalBadge');
+        const filterPendingCount = document.getElementById('filterPendingCount');
+        const filterWaitlistCount = document.getElementById('filterWaitlistCount');
+        const filterConfirmedCount = document.getElementById('filterConfirmedCount');
         if (!container) return;
 
         const allBookings = Array.isArray(this.db.bookings) ? this.db.bookings : [];
         const pendingCount = allBookings.filter(b => b.status === 'pending').length;
+        const waitlistCount = allBookings.filter(b => b.status === 'waiting').length;
+        const confirmedCount = allBookings.filter(b => b.status === 'confirmed').length;
+
         if (badge) badge.textContent = pendingCount;
+        if (waitlistBadge) waitlistBadge.textContent = waitlistCount;
+        if (waitlistTotalBadge) waitlistTotalBadge.textContent = waitlistCount;
+        if (filterPendingCount) filterPendingCount.textContent = pendingCount;
+        if (filterWaitlistCount) filterWaitlistCount.textContent = waitlistCount;
+        if (filterConfirmedCount) filterConfirmedCount.textContent = confirmedCount;
 
         const filterEl = document.getElementById('adminBookingStatusFilter');
         const filter = filterEl ? filterEl.value : 'pending';
+
+        // Синхронизация активной таблетки-фильтра
+        document.querySelectorAll('#adminBookingsFilterPills .pill-filter-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.filter === filter);
+        });
 
         let filtered = allBookings;
         if (filter === 'pending') {
@@ -1680,17 +1865,25 @@ class CarWashApp {
             const card = document.createElement('div');
             card.className = `admin-booking-card ${b.status}`;
 
+            // Селект боксов
             let boxOptions = '';
             this.db.boxes.forEach(bx => {
                 const isBusy = this.db.orders.some(o => o.boxId === bx.id && (o.status === 'in-progress' || o.status === 'ready'));
-                const isSelected = b.assignedBoxId === bx.id;
-                boxOptions += `<option value="${bx.id}" ${isSelected ? 'selected' : ''}>${Security.escapeHTML(bx.name)} ${isBusy ? '(Занят сейчас)' : '(Свободен)'}</option>`;
+                const isSelected = (b.assignedBoxId === bx.id) || (!b.assignedBoxId && bx.id === 1);
+                boxOptions += `<option value="${bx.id}" ${isSelected ? 'selected' : ''}>${Security.escapeHTML(bx.name)} ${isBusy ? '(Занят)' : '(Свободен)'}</option>`;
+            });
+
+            // Селект мойщиков
+            let workerOptions = '';
+            this.db.workers.forEach((w, idx) => {
+                const isSelected = (b.assignedWorkerId === w.id) || (!b.assignedWorkerId && idx === 0);
+                workerOptions += `<option value="${w.id}" ${isSelected ? 'selected' : ''}>${Security.escapeHTML(w.name)} (${w.percent}%)</option>`;
             });
 
             const statusLabels = {
                 pending: '⏳ Ожидает решения',
                 waiting: '⏱ В листе ожидания',
-                confirmed: '✅ Подтверждена',
+                confirmed: '✅ В очереди бокса',
                 'in-progress': '🚿 В боксе',
                 completed: '🎉 Завершена',
                 cancelled: '❌ Отменена'
@@ -1701,7 +1894,7 @@ class CarWashApp {
                     <div>
                         <span class="garage-plate-badge">${Security.escapeHTML(b.carPlate)}</span>
                         <h3 style="margin:0.25rem 0;">${Security.escapeHTML(b.carModel || 'Автомобиль')}</h3>
-                        <div class="text-muted" style="font-size:0.9rem;">Клиент: <strong>${Security.escapeHTML(b.clientName)}</strong> (📞 <a href="tel:${Security.escapeHTML(b.clientPhone)}">${Security.escapeHTML(b.clientPhone)}</a>)</div>
+                        <div class="text-muted" style="font-size:0.9rem;">Клиент: <strong>${Security.escapeHTML(b.clientName)}</strong> (📞 <a href="tel:${Security.escapeHTML(b.clientPhone)}" style="color:var(--primary); font-weight:600;">${Security.escapeHTML(b.clientPhone)}</a>)</div>
                     </div>
                     <span class="status-pill ${b.status}">${statusLabels[b.status] || b.status}</span>
                 </div>
@@ -1713,15 +1906,25 @@ class CarWashApp {
                 </div>
 
                 <div class="booking-actions-box">
-                    <label style="font-size:0.85rem; font-weight:600; display:block;">Назначить бокс (из 10 боксов):</label>
-                    <select id="assignBox_${b.id}">
-                        ${boxOptions}
-                    </select>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <div>
+                            <label for="assignBox_${b.id}" style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.25rem;">Назначить бокс:</label>
+                            <select id="assignBox_${b.id}" style="width:100%; font-size:0.85rem; padding:0.4rem;">
+                                ${boxOptions}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="assignWorker_${b.id}" style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.25rem;">Назначить мойщика:</label>
+                            <select id="assignWorker_${b.id}" style="width:100%; font-size:0.85rem; padding:0.4rem;">
+                                ${workerOptions}
+                            </select>
+                        </div>
+                    </div>
 
-                    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.5rem;">
+                    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.6rem;">
                         ${b.status !== 'confirmed' ? `
                             <button class="btn btn-success btn-sm" type="button" onclick="app.confirmAdminBooking('${b.id}')">
-                                ✅ Принять и назначить бокс
+                                ✅ Принять заявку
                             </button>
                         ` : `
                             <button class="btn btn-primary btn-sm" type="button" onclick="app.startBookingInBay('${b.id}')">
@@ -1743,21 +1946,171 @@ class CarWashApp {
         });
     }
 
+    // ==================== ВЫДЕЛЕННЫЙ ЛИСТ ОЖИДАНИЯ (АДМИНИСТРАТОР) ====================
+
+    renderAdminWaitlist() {
+        const container = document.getElementById('adminWaitlistContainer');
+        const badge = document.getElementById('waitlistCount');
+        const totalBadge = document.getElementById('waitlistTotalBadge');
+        if (!container) return;
+
+        const allBookings = Array.isArray(this.db.bookings) ? this.db.bookings : [];
+        const waitlist = allBookings.filter(b => b.status === 'waiting');
+
+        if (badge) badge.textContent = waitlist.length;
+        if (totalBadge) totalBadge.textContent = waitlist.length;
+
+        container.innerHTML = '';
+
+        if (waitlist.length === 0) {
+            container.innerHTML = `
+                <div class="card" style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">⏱</div>
+                    <h3>Лист ожидания пуст</h3>
+                    <p>Все клиенты распределены по боксам. Когда все боксы заняты или клиент ожидает свободного слота, переводите заявки сюда кнопкой «⏱ В лист ожидания».</p>
+                    <button class="btn btn-primary btn-sm" type="button" onclick="app.switchTab('adminBookings')" style="margin-top: 1rem;">
+                        📅 Перейти к заявкам на бронь
+                    </button>
+                </div>
+            `;
+            return;
+        }
+
+        waitlist.forEach(b => {
+            const serviceNames = (b.services || []).map(sid => {
+                const s = this.db.services.find(srv => srv.id === sid);
+                return s ? Security.escapeHTML(s.name) : '';
+            }).filter(Boolean).join(', ');
+
+            let boxOptions = '';
+            this.db.boxes.forEach(bx => {
+                const isBusy = this.db.orders.some(o => o.boxId === bx.id && (o.status === 'in-progress' || o.status === 'ready'));
+                const isSelected = (b.assignedBoxId === bx.id) || (!b.assignedBoxId && bx.id === 1);
+                boxOptions += `<option value="${bx.id}" ${isSelected ? 'selected' : ''}>${Security.escapeHTML(bx.name)} ${isBusy ? '(Занят)' : '(Свободен)'}</option>`;
+            });
+
+            let workerOptions = '';
+            this.db.workers.forEach((w, idx) => {
+                const isSelected = (b.assignedWorkerId === w.id) || (!b.assignedWorkerId && idx === 0);
+                workerOptions += `<option value="${w.id}" ${isSelected ? 'selected' : ''}>${Security.escapeHTML(w.name)} (${w.percent}%)</option>`;
+            });
+
+            const card = document.createElement('div');
+            card.className = 'admin-booking-card waiting';
+
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <span class="garage-plate-badge">${Security.escapeHTML(b.carPlate)}</span>
+                        <h3 style="margin:0.25rem 0;">${Security.escapeHTML(b.carModel || 'Автомобиль')}</h3>
+                        <div class="text-muted" style="font-size:0.9rem;">
+                            Клиент: <strong>${Security.escapeHTML(b.clientName)}</strong> • 
+                            <a href="tel:${Security.escapeHTML(b.clientPhone)}" style="color:var(--primary); font-weight:600;">📞 ${Security.escapeHTML(b.clientPhone)}</a>
+                        </div>
+                    </div>
+                    <span class="status-pill waiting">⏱ В листе ожидания</span>
+                </div>
+
+                <div style="margin: 0.75rem 0; padding: 0.5rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 0.95rem;">
+                    <div>📅 Желаемое время: <strong style="font-size:1.05rem; color:var(--primary);">${b.date} в ${b.time}</strong></div>
+                    <div style="margin-top:0.25rem;">Услуги: <strong>${serviceNames || '—'}</strong></div>
+                    <div style="margin-top:0.25rem;">Сумма заказа: <strong>${Number(b.totalPrice).toLocaleString()} ₸</strong></div>
+                </div>
+
+                <div class="booking-actions-box">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <div>
+                            <label for="waitlistAssignBox_${b.id}" style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.25rem;">Назначить бокс:</label>
+                            <select id="waitlistAssignBox_${b.id}" style="width:100%; font-size:0.85rem; padding:0.4rem;">
+                                ${boxOptions}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="waitlistAssignWorker_${b.id}" style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.25rem;">Назначить мойщика:</label>
+                            <select id="waitlistAssignWorker_${b.id}" style="width:100%; font-size:0.85rem; padding:0.4rem;">
+                                ${workerOptions}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.6rem;">
+                        <button class="btn btn-success btn-sm" type="button" onclick="app.confirmAdminBooking('${b.id}')">
+                            ✅ Назначить в бокс
+                        </button>
+                        <a href="tel:${encodeURIComponent(b.clientPhone)}" class="btn btn-outline btn-sm" style="color:var(--primary);">
+                            📞 Позвонить
+                        </a>
+                        <button class="btn btn-outline btn-sm" type="button" onclick="app.cancelAdminBooking('${b.id}')" style="color:#ef4444; border-color:#fecaca;">
+                            ❌ Отклонить
+                        </button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
     confirmAdminBooking(bookingId) {
         if (!this.verifyAuth('admin')) return;
         const booking = (this.db.bookings || []).find(b => b.id === bookingId);
         if (!booking) return;
 
-        const boxSelect = document.getElementById(`assignBox_${bookingId}`);
-        const boxId = boxSelect ? parseInt(boxSelect.value, 10) : 1;
+        const boxSelect = document.getElementById(`assignBox_${bookingId}`) || document.getElementById(`waitlistAssignBox_${bookingId}`);
+        const workerSelect = document.getElementById(`assignWorker_${bookingId}`) || document.getElementById(`waitlistAssignWorker_${bookingId}`);
 
-        booking.assignedBoxId = boxId;
-        booking.status = 'confirmed';
-        this.saveDatabase();
-        this.renderAll();
+        const boxId = boxSelect ? parseInt(boxSelect.value, 10) : (booking.assignedBoxId || 1);
+        const workerId = workerSelect ? workerSelect.value : (booking.assignedWorkerId || (this.db.workers[0] ? this.db.workers[0].id : null));
 
         const box = this.db.boxes.find(b => b.id === boxId);
-        alert(`✅ Бронь для авто ${booking.carPlate} подтверждена! Назначен ${box ? box.name : 'Бокс ' + boxId}.`);
+        const boxName = box ? box.name : `Бокс ${boxId}`;
+        const worker = (this.db.workers || []).find(w => w.id === workerId) || this.db.workers[0];
+        const workerName = worker ? worker.name : '—';
+
+        booking.assignedBoxId = boxId;
+        booking.assignedWorkerId = worker ? worker.id : null;
+
+        // Проверяем, свободен ли бокс прямо сейчас
+        const isBusy = this.db.orders.some(o => o.boxId === boxId && (o.status === 'in-progress' || o.status === 'ready'));
+
+        if (!isBusy) {
+            // БОКС СВОБОДЕН: запускаем авто прямо в работу и переходим на вкладку боксов
+            const workerPercent = worker ? (typeof worker.percent === 'number' ? worker.percent : 30) : 30;
+            const newOrder = {
+                id: Security.generateId(),
+                carPlate: booking.carPlate,
+                carModel: booking.carModel || '',
+                category: booking.category || 'sedan',
+                boxId,
+                workerId: worker ? worker.id : null,
+                workerPercentSnapshot: workerPercent,
+                workerNameSnapshot: worker ? worker.name : '',
+                workerSalaryEarned: Math.round(Number(booking.totalPrice || 0) * (workerPercent / 100)),
+                phone: booking.clientPhone,
+                services: booking.services || [],
+                totalPrice: booking.totalPrice,
+                status: 'in-progress',
+                paymentMethod: null,
+                createdAt: new Date().toISOString(),
+                paidAt: null
+            };
+
+            this.db.orders.unshift(newOrder);
+            booking.status = 'in-progress';
+            booking.orderId = newOrder.id;
+
+            this.saveDatabase();
+            this.renderAll();
+            this.switchTab('activeOrders');
+            alert(`✅ Заявка принята!\n\n${boxName} свободен — автомобиль ${booking.carPlate} запущен в работу.\n🧽 Ответственный мойщик: ${workerName}.`);
+        } else {
+            // БОКС ЗАНЯТ: ставим авто следующим в очередь под этим боксом и переходим на вкладку боксов!
+            booking.status = 'confirmed';
+
+            this.saveDatabase();
+            this.renderAll();
+            this.switchTab('activeOrders');
+            alert(`⏳ ${boxName} сейчас занят.\n\nАвтомобиль ${booking.carPlate} поставлен следующим в очередь этого бокса!\n🧽 Назначен мойщик: ${workerName}.`);
+        }
     }
 
     waitlistAdminBooking(bookingId) {
@@ -1768,7 +2121,7 @@ class CarWashApp {
         booking.status = 'waiting';
         this.saveDatabase();
         this.renderAll();
-        alert(`⏱ Заявка авто ${booking.carPlate} переведена в лист ожидания.`);
+        alert(`⏱ Заявка авто ${booking.carPlate} переведена в Лист ожидания!\n\nВы можете в любой момент открыть её во вкладке «Лист ожидания» в верхнем меню.`);
     }
 
     cancelAdminBooking(bookingId) {
@@ -1788,23 +2141,35 @@ class CarWashApp {
         const booking = (this.db.bookings || []).find(b => b.id === bookingId);
         if (!booking) return;
 
-        const boxSelect = document.getElementById(`assignBox_${bookingId}`);
-        const boxId = boxSelect ? parseInt(boxSelect.value, 10) : (booking.assignedBoxId || 1);
+        const boxSelect = document.getElementById(`assignBox_${bookingId}`) || document.getElementById(`waitlistAssignBox_${bookingId}`);
+        const workerSelect = document.getElementById(`assignWorker_${bookingId}`) || document.getElementById(`waitlistAssignWorker_${bookingId}`);
 
-        const worker = this.db.workers[0];
-        const workerId = worker ? worker.id : null;
-        const workerPercent = worker ? worker.percent : 30;
+        const boxId = boxSelect ? parseInt(boxSelect.value, 10) : (booking.assignedBoxId || 1);
+        const workerId = workerSelect ? workerSelect.value : (booking.assignedWorkerId || (this.db.workers[0] ? this.db.workers[0].id : null));
+
+        const box = this.db.boxes.find(b => b.id === boxId);
+        const boxName = box ? box.name : `Бокс ${boxId}`;
+
+        // Если в боксе еще моется предыдущая машина
+        const activeOrderInBox = this.db.orders.find(o => o.boxId === boxId && (o.status === 'in-progress' || o.status === 'ready'));
+        if (activeOrderInBox) {
+            const proceed = confirm(`В ${boxName} сейчас находится авто ${activeOrderInBox.carPlate} (${activeOrderInBox.status === 'ready' ? 'помыто' : 'моется'}).\n\nВы хотите всё равно запустить автомобиль ${booking.carPlate} в этот бокс?`);
+            if (!proceed) return;
+        }
+
+        const worker = (this.db.workers || []).find(w => w.id === workerId) || this.db.workers[0];
+        const workerPercent = worker ? (typeof worker.percent === 'number' ? worker.percent : 30) : 30;
 
         const newOrder = {
             id: Security.generateId(),
             carPlate: booking.carPlate,
-            carModel: booking.carModel,
+            carModel: booking.carModel || '',
             category: booking.category || 'sedan',
             boxId,
-            workerId,
+            workerId: worker ? worker.id : null,
             workerPercentSnapshot: workerPercent,
             workerNameSnapshot: worker ? worker.name : '',
-            workerSalaryEarned: Math.round(booking.totalPrice * (workerPercent / 100)),
+            workerSalaryEarned: Math.round(Number(booking.totalPrice || 0) * (workerPercent / 100)),
             phone: booking.clientPhone,
             services: booking.services || [],
             totalPrice: booking.totalPrice,
@@ -1818,11 +2183,12 @@ class CarWashApp {
         booking.status = 'in-progress';
         booking.orderId = newOrder.id;
         booking.assignedBoxId = boxId;
+        booking.assignedWorkerId = worker ? worker.id : null;
 
         this.saveDatabase();
         this.renderAll();
         this.switchTab('activeOrders');
-        alert(`🚿 Автомобиль ${booking.carPlate} запущен в работу в ${this.db.boxes.find(b => b.id === boxId)?.name || 'бокс'}!`);
+        alert(`🚿 Автомобиль ${booking.carPlate} успешно запущен в работу в ${boxName}!\n🧽 Назначен мойщик: ${worker ? worker.name : '—'}.`);
     }
 
     // ==================== ЛОГИКА ГОСТЯ (КЛИЕНТА) ====================
@@ -1909,6 +2275,9 @@ class CarWashApp {
         this.db.boxes.forEach(box => {
             const activeOrder = this.db.orders.find(o => o.boxId === box.id && (o.status === 'in-progress' || o.status === 'ready'));
             const isBusy = !!activeOrder;
+            const queuedBookings = (this.db.bookings || []).filter(b => 
+                b.assignedBoxId === box.id && (b.status === 'confirmed' || b.status === 'waiting')
+            );
 
             const card = document.createElement('div');
             card.className = `box-card ${isBusy ? 'busy' : 'free'}`;
@@ -1921,8 +2290,19 @@ class CarWashApp {
                     <div style="font-size:0.9rem; color:var(--text-muted); margin: 0.5rem 0;">
                         ${activeOrder.status === 'in-progress' ? '🚿 Идет мойка авто' : '✅ Готово к выдаче'}
                     </div>
+                    ${queuedBookings.length > 0 ? `
+                        <div style="font-size:0.8rem; color:#b45309; margin-top:0.25rem; font-weight:600;">
+                            ⏳ В очереди: ${queuedBookings.length} авто
+                        </div>
+                    ` : ''}
                 ` : `
-                    <div style="color:var(--success); font-weight:500; margin: 0.5rem 0;">Готов к приему авто</div>
+                    ${queuedBookings.length > 0 ? `
+                        <div style="color:var(--primary); font-weight:500; margin: 0.5rem 0; font-size:0.88rem;">
+                            ⏳ Ожидает авто по брони (${queuedBookings.length})
+                        </div>
+                    ` : `
+                        <div style="color:var(--success); font-weight:500; margin: 0.5rem 0;">Готов к приему авто</div>
+                    `}
                 `}
             `;
             container.appendChild(card);
@@ -2000,8 +2380,9 @@ class CarWashApp {
         }
 
         const myTasks = this.db.orders.filter(o => o.workerId === this.currentWorkerId && (o.status === 'in-progress' || o.status === 'ready'));
+        const myQueued = (this.db.bookings || []).filter(b => b.assignedWorkerId === this.currentWorkerId && b.status === 'confirmed');
 
-        if (myTasks.length === 0) {
+        if (myTasks.length === 0 && myQueued.length === 0) {
             cardsContainer.innerHTML = `
                 <div class="card" style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 2.5rem;">
                     <h3>Нет назначенных машин</h3>
@@ -2053,6 +2434,43 @@ class CarWashApp {
                 `;
                 cardsContainer.appendChild(card);
             });
+
+            if (myQueued.length > 0) {
+                const queueHeader = document.createElement('div');
+                queueHeader.style.gridColumn = '1 / -1';
+                queueHeader.style.marginTop = '1rem';
+                queueHeader.innerHTML = `
+                    <h3 style="font-size:1.1rem; color:var(--text-muted); display:flex; align-items:center; gap:0.5rem;">
+                        <span>⏳ Скоро заедут к вам в бокс:</span>
+                        <span class="badge-queued">${myQueued.length} авто</span>
+                    </h3>
+                `;
+                cardsContainer.appendChild(queueHeader);
+
+                myQueued.forEach(qb => {
+                    const box = this.db.boxes.find(b => b.id === qb.assignedBoxId);
+                    const percent = worker ? worker.percent : 30;
+                    const estSalary = Math.round(Number(qb.totalPrice || 0) * (percent / 100));
+
+                    const card = document.createElement('div');
+                    card.className = 'worker-task-card';
+                    card.style.borderTop = '4px solid var(--warning)';
+                    card.innerHTML = `
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                                <span class="badge" style="background:#0f172a; color:#fff; font-size:0.9rem;">${box ? Security.escapeHTML(box.name) : 'Бокс'}</span>
+                                <span class="status-pill waiting">⏳ В очереди</span>
+                            </div>
+                            <h3 style="font-size:1.3rem; margin:0.3rem 0;">${Security.escapeHTML(qb.carPlate)}</h3>
+                            <div class="text-muted">${Security.escapeHTML(qb.carModel || 'Автомобиль')} • 🕒 ${Security.escapeHTML(qb.time)}</div>
+                            <div style="font-size:0.85rem; color:#b45309; background:#fef3c7; padding:0.4rem 0.6rem; border-radius:6px; margin-top:0.75rem;">
+                                Ожидаемая выплата: <strong>${estSalary.toLocaleString()} ₸</strong>
+                            </div>
+                        </div>
+                    `;
+                    cardsContainer.appendChild(card);
+                });
+            }
         }
 
         this.updateWorkerStats();
@@ -2135,15 +2553,22 @@ class CarWashApp {
         this.db.boxes.forEach(box => {
             const activeOrder = this.db.orders.find(o => o.boxId === box.id && (o.status === 'in-progress' || o.status === 'ready'));
             const isBusy = !!activeOrder;
+            const queuedBookings = (this.db.bookings || []).filter(b => 
+                b.assignedBoxId === box.id && (b.status === 'confirmed' || b.status === 'waiting')
+            );
 
             const card = document.createElement('div');
             card.className = `box-card ${isBusy ? 'busy' : 'free'}`;
-            card.innerHTML = `
+
+            let cardContent = `
                 <div class="box-header">
                     <h3>${Security.escapeHTML(box.name)}</h3>
                     <span class="box-status ${isBusy ? 'busy' : 'free'}">${isBusy ? 'Занят' : 'Свободен'}</span>
                 </div>
-                ${isBusy ? `
+            `;
+
+            if (isBusy) {
+                cardContent += `
                     <div class="box-car-info">${Security.escapeHTML(activeOrder.carPlate)}</div>
                     <div class="box-details">${Security.escapeHTML(activeOrder.carModel || 'Авто')} • ${Security.escapeHTML(this.getWorkerName(activeOrder.workerId))}</div>
                     <div style="margin-top: 0.5rem;">
@@ -2151,16 +2576,87 @@ class CarWashApp {
                             ${activeOrder.status === 'in-progress' ? '🚿 Моется' : '✅ Помыта'}
                         </span>
                     </div>
-                ` : `
-                    <div class="text-muted" style="margin: 1rem 0;">Бокс свободен</div>
-                    <button class="btn btn-outline btn-sm" type="button" onclick="app.quickAssignBox(${box.id})">+ Запустить авто</button>
-                `}
-            `;
+                `;
+
+                // Отображение следующей машины в очереди под занятым боксом
+                if (queuedBookings.length > 0) {
+                    const nextBooking = queuedBookings[0];
+                    const nextWorkerName = this.getWorkerName(nextBooking.assignedWorkerId);
+                    cardContent += `
+                        <div class="box-queue-section">
+                            <div class="box-queue-header">
+                                <span>⏳ Следующая машина:</span>
+                                ${queuedBookings.length > 1 ? `<span class="badge-queued">+${queuedBookings.length} в очереди</span>` : ''}
+                            </div>
+                            <div class="box-queue-item">
+                                <div class="box-queue-item-main">
+                                    <span class="box-queue-plate">${Security.escapeHTML(nextBooking.carPlate)}</span>
+                                    <span class="box-queue-model">${Security.escapeHTML(nextBooking.carModel || 'Авто')}</span>
+                                </div>
+                                <div class="box-queue-meta">
+                                    <span>🕒 ${Security.escapeHTML(nextBooking.time || '—')}</span>
+                                    <span>🧽 ${Security.escapeHTML(nextWorkerName)}</span>
+                                </div>
+                                <div class="box-queue-actions">
+                                    <button class="btn btn-primary btn-xs" type="button" onclick="app.startBookingInBay('${nextBooking.id}')">
+                                        🚿 Запустить в бокс
+                                    </button>
+                                </div>
+                            </div>
+                            ${queuedBookings.length > 1 ? `
+                                <div style="font-size:0.75rem; text-align:center; color:var(--text-muted); padding-top:0.15rem;">
+                                    ещё ${queuedBookings.length - 1} авто ожидает этот бокс
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+            } else {
+                // Бокс свободен
+                if (queuedBookings.length > 0) {
+                    const nextBooking = queuedBookings[0];
+                    const nextWorkerName = this.getWorkerName(nextBooking.assignedWorkerId);
+                    cardContent += `
+                        <div class="box-queue-section" style="margin-top:0.25rem; border-top:none; padding-top:0;">
+                            <div class="box-queue-header" style="color:var(--success-hover);">
+                                <span>⏳ Назначено в этот бокс:</span>
+                                ${queuedBookings.length > 1 ? `<span class="badge-queued">+${queuedBookings.length}</span>` : ''}
+                            </div>
+                            <div class="box-queue-item" style="border-color: #86efac;">
+                                <div class="box-queue-item-main">
+                                    <span class="box-queue-plate">${Security.escapeHTML(nextBooking.carPlate)}</span>
+                                    <span class="box-queue-model">${Security.escapeHTML(nextBooking.carModel || 'Авто')}</span>
+                                </div>
+                                <div class="box-queue-meta">
+                                    <span>🕒 ${Security.escapeHTML(nextBooking.time || '—')}</span>
+                                    <span>🧽 ${Security.escapeHTML(nextWorkerName)}</span>
+                                </div>
+                                <div class="box-queue-actions">
+                                    <button class="btn btn-success btn-xs" type="button" onclick="app.startBookingInBay('${nextBooking.id}')">
+                                        🚿 Запустить сейчас
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top:0.5rem;">
+                            <button class="btn btn-outline btn-xs" type="button" onclick="app.quickAssignBox(${box.id})" style="width:100%;">+ Запустить другое авто</button>
+                        </div>
+                    `;
+                } else {
+                    cardContent += `
+                        <div class="text-muted" style="margin: 1rem 0;">Бокс свободен</div>
+                        <button class="btn btn-outline btn-sm" type="button" onclick="app.quickAssignBox(${box.id})">+ Запустить авто</button>
+                    `;
+                }
+            }
+
+            card.innerHTML = cardContent;
             container.appendChild(card);
 
             const option = document.createElement('option');
             option.value = box.id;
-            option.textContent = `${box.name} ${isBusy ? '(Занят)' : '(Свободен)'}`;
+            const queueSuffix = queuedBookings.length > 0 ? ` (+${queuedBookings.length} в очереди)` : '';
+            option.textContent = `${box.name} ${isBusy ? '(Занят)' : '(Свободен)'}${queueSuffix}`;
             boxSelect.appendChild(option);
         });
 
@@ -2305,10 +2801,13 @@ class CarWashApp {
         tbody.innerHTML = '';
 
         const activeList = this.db.orders.filter(o => o.status === 'in-progress' || o.status === 'ready');
-        document.getElementById('activeCount').textContent = activeList.length;
+        const queuedBookings = (this.db.bookings || []).filter(b => b.status === 'confirmed');
 
-        if (activeList.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding:2rem;">Сейчас нет машин в боксах. Нажмите «Оформить заезд».</td></tr>`;
+        const totalActiveAndQueue = activeList.length + queuedBookings.length;
+        document.getElementById('activeCount').textContent = totalActiveAndQueue;
+
+        if (totalActiveAndQueue === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding:2rem;">Сейчас нет машин в боксах. Нажмите «Оформить заезд» или подтвердите онлайн-бронь.</td></tr>`;
             return;
         }
 
@@ -2347,6 +2846,39 @@ class CarWashApp {
                             💳 Оплата
                         </button>
                     </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Строки очереди для подтвержденных броней
+        queuedBookings.forEach((b, qIdx) => {
+            const box = this.db.boxes.find(bx => bx.id === b.assignedBoxId);
+            const workerName = this.getWorkerName(b.assignedWorkerId);
+            const serviceNames = (b.services || []).map(sid => {
+                const s = this.db.services.find(srv => srv.id === sid);
+                return s ? Security.escapeHTML(s.name) : '';
+            }).filter(Boolean).join(', ');
+
+            const tr = document.createElement('tr');
+            tr.style.background = 'rgba(254, 243, 199, 0.3)';
+            tr.innerHTML = `
+                <td><span class="badge-queued">Очередь</span></td>
+                <td>
+                    <strong>${Security.escapeHTML(b.carPlate)}</strong>
+                    <div class="text-muted" style="font-size:0.8rem;">${Security.escapeHTML(b.carModel || 'Авто')} (🕒 ${Security.escapeHTML(b.time || '—')})</div>
+                </td>
+                <td><strong>${box ? Security.escapeHTML(box.name) : '—'}</strong></td>
+                <td style="max-width:250px;">${serviceNames || '—'}</td>
+                <td>${Security.escapeHTML(workerName)}</td>
+                <td><strong>${Number(b.totalPrice).toLocaleString()} ₸</strong></td>
+                <td>
+                    <span class="status-pill waiting">⏳ В очереди</span>
+                </td>
+                <td>
+                    <button class="btn btn-primary btn-sm" type="button" onclick="app.startBookingInBay('${b.id}')">
+                        🚿 Запустить в бокс
+                    </button>
                 </td>
             `;
             tbody.appendChild(tr);

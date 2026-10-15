@@ -74,6 +74,9 @@
             <button class="nav-tab role-tab-admin" data-tab="adminBookings" type="button" onclick="app.switchTab('adminBookings')">
                 📅 Заявки на бронь (<span id="pendingBookingsCount">0</span>)
             </button>
+            <button class="nav-tab role-tab-admin" data-tab="adminWaitlist" type="button" onclick="app.switchTab('adminWaitlist')">
+                ⏱ Лист ожидания (<span id="waitlistCount">0</span>)
+            </button>
             <button class="nav-tab role-tab-admin" data-tab="newOrder" type="button" onclick="app.switchTab('newOrder')">
                 ➕ Оформить заезд
             </button>
@@ -433,21 +436,46 @@
 
             <!-- 2. УПРАВЛЕНИЕ ОНЛАЙН-БРОНИРОВАНИЯМИ (ДЛЯ АДМИНИСТРАТОРА) -->
             <section id="tab-adminBookings" class="tab-content" aria-labelledby="adminBookingsTitle">
-                <div class="section-header">
-                    <h2 id="adminBookingsTitle">📅 Заявки на онлайн-бронирование</h2>
+                <div class="section-header" style="flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <h2 id="adminBookingsTitle">📅 Заявки на онлайн-бронирование</h2>
+                        <div class="filter-pills" id="adminBookingsFilterPills">
+                            <button class="pill-filter-btn active" data-filter="pending" type="button" onclick="app.setBookingsFilter('pending')">📥 Новые заявки (<span id="filterPendingCount">0</span>)</button>
+                            <button class="pill-filter-btn" data-filter="waiting" type="button" onclick="app.switchTab('adminWaitlist')">⏱ Лист ожидания (<span id="filterWaitlistCount">0</span>)</button>
+                            <button class="pill-filter-btn" data-filter="confirmed" type="button" onclick="app.setBookingsFilter('confirmed')">✅ В очереди боксов (<span id="filterConfirmedCount">0</span>)</button>
+                            <button class="pill-filter-btn" data-filter="all" type="button" onclick="app.setBookingsFilter('all')">📋 Все заявки</button>
+                        </div>
+                    </div>
                     <div class="filter-group">
                         <label for="adminBookingStatusFilter">Фильтр: </label>
-                        <select id="adminBookingStatusFilter" onchange="app.renderAdminBookings()">
-                            <option value="all">Все заявки</option>
+                        <select id="adminBookingStatusFilter" onchange="app.onBookingFilterSelectChange()">
                             <option value="pending" selected>Ожидают решения</option>
                             <option value="waiting">В листе ожидания</option>
-                            <option value="confirmed">Подтвержденные</option>
+                            <option value="confirmed">Подтвержденные (в очереди)</option>
+                            <option value="all">Все заявки</option>
                         </select>
                     </div>
                 </div>
 
                 <div id="adminBookingsContainer" class="admin-bookings-grid">
                     <!-- Карточки броней для администратора -->
+                </div>
+            </section>
+
+            <!-- 2.1. ВЫДЕЛЕННЫЙ ЛИСТ ОЖИДАНИЯ КЛИЕНТОВ -->
+            <section id="tab-adminWaitlist" class="tab-content" aria-labelledby="adminWaitlistTitle">
+                <div class="section-header">
+                    <div>
+                        <h2 id="adminWaitlistTitle">⏱ Лист ожидания клиентов</h2>
+                        <p class="text-muted" style="margin-top:0.25rem;">Клиенты, ожидающие освобождения боксов или подтверждения. Вы можете в 1 клик распределить авто в нужный бокс и назначить мойщика.</p>
+                    </div>
+                    <div class="waitlist-header-badge">
+                        В листе ожидания: <strong id="waitlistTotalBadge">0</strong> авто
+                    </div>
+                </div>
+
+                <div id="adminWaitlistContainer" class="admin-bookings-grid">
+                    <!-- Карточки листа ожидания -->
                 </div>
             </section>
 
@@ -926,6 +954,7 @@
                         <input type="password" id="initSecretPhrase" required minlength="4" placeholder="Запомните его на случай утери пароля">
                     </div>
                     <button class="btn btn-primary" style="width:100%;" type="submit">🚀 Завершить настройку и начать работу</button>
+                    <button class="btn btn-outline" style="width:100%; margin-top:0.5rem;" type="button" onclick="app.closeFirstRunModal()">Отмена</button>
                 </form>
             </div>
         </div>
