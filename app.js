@@ -169,7 +169,7 @@ class CarWashApp {
         this.db.workers.forEach(w => {
             const opt = document.createElement('option');
             opt.value = w.id;
-            opt.textContent = `${w.name} (${w.percent}% от мойки)`;
+            opt.textContent = w.name;
             select.appendChild(opt);
         });
 
@@ -202,7 +202,7 @@ class CarWashApp {
             this.closeAuthModal();
             this.renderAll();
         } else {
-            alert('Неверный PIN-код сотрудника! (По умолчанию: 0000)');
+            alert('Неверный PIN-код!');
         }
     }
 
@@ -231,7 +231,7 @@ class CarWashApp {
             this.renderAll();
             alert('Успешный вход в кабинет Администратора смены!');
         } else {
-            alert('Неверный пароль администратора! (По умолчанию: 5555)');
+            alert('Неверный пароль администратора!');
         }
     }
 
@@ -260,12 +260,12 @@ class CarWashApp {
             this.renderAll();
             alert('Успешный вход в кабинет Владельца!');
         } else {
-            alert('Неверный пароль владельца! Если забыли пароль, нажмите «Забыли пароль?» ниже.');
+            alert('Неверный пароль владельца!');
         }
     }
 
     forgotPasswordPrompt() {
-        const recoveryCode = prompt('Для сброса пароля введите мастер-код восстановления (по умолчанию: 9999):');
+        const recoveryCode = prompt('Для сброса пароля введите мастер-код восстановления:');
         if (recoveryCode === '9999') {
             this.db.ownerPassword = '1234';
             this.saveDatabase();
@@ -496,7 +496,7 @@ class CarWashApp {
                             <strong>Услуги:</strong> ${serviceNames}
                         </div>
                         <div style="font-size:0.85rem; color:#0369a1; background:#e0f2fe; padding:0.4rem 0.6rem; border-radius:6px;">
-                            Ваша выплата за этот авто: <strong>${earnedForOrder.toLocaleString()} ₸</strong> (${worker.percent}%)
+                            Ваша выплата за этот авто: <strong>${earnedForOrder.toLocaleString()} ₸</strong>
                         </div>
                     </div>
                     <div style="margin-top: 1.25rem;">
@@ -630,7 +630,7 @@ class CarWashApp {
         this.db.workers.forEach(w => {
             const option = document.createElement('option');
             option.value = w.id;
-            option.textContent = `${w.name} (${w.percent}%)`;
+            option.textContent = w.name;
             workerSelect.appendChild(option);
         });
     }

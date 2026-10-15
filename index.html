@@ -447,31 +447,31 @@
                 </div>
 
                 <div class="card" style="margin-top: 1.5rem;">
-                    <h3>Безопасность и пароли доступа</h3>
-                    <p class="text-muted">Установите пароли, чтобы клиенты и посторонние не могли зайти в служебные разделы.</p>
+                    <h3>🔐 База доступов и пароли (Только для Владельца)</h3>
+                    <p class="text-muted">Здесь хранятся все пароли системы. Вы можете в любой момент посмотреть их или изменить. В окне входа эти пароли скрыты от посторонних.</p>
                     
-                    <div class="form-grid" style="margin-top: 1rem;">
+                    <div class="form-grid" style="margin-top: 1.25rem;">
                         <div class="form-group">
                             <label for="settingAdminPassword">Пароль Администратора смены:</label>
-                            <input type="password" id="settingAdminPassword" placeholder="По умолчанию: 5555">
-                            <small class="text-muted">Дает доступ к приему авто и кассе смены</small>
+                            <input type="text" id="settingAdminPassword" placeholder="Пароль администратора">
+                            <small class="text-muted">Для оформления авто и кассы смены</small>
                         </div>
 
                         <div class="form-group">
                             <label for="settingWorkerPin">PIN-код для Мойщиков:</label>
-                            <input type="password" id="settingWorkerPin" placeholder="По умолчанию: 0000">
-                            <small class="text-muted">Для входа мойщиков в свою рабочую смену</small>
+                            <input type="text" id="settingWorkerPin" placeholder="PIN мойщиков">
+                            <small class="text-muted">Для входа мойщиков в свои задачи</small>
                         </div>
 
                         <div class="form-group">
                             <label for="settingOwnerPassword">Пароль Владельца (Директора):</label>
-                            <input type="password" id="settingOwnerPassword" placeholder="По умолчанию: 1234">
-                            <small class="text-muted">Защищает общую прибыль и настройки</small>
+                            <input type="text" id="settingOwnerPassword" placeholder="Пароль владельца">
+                            <small class="text-muted">Для входа в этот кабинет и кассу</small>
                         </div>
                     </div>
 
                     <div style="margin-top: 1rem;">
-                        <button class="btn btn-primary" onclick="app.saveSecurityPasswords()">💾 Сохранить все пароли</button>
+                        <button class="btn btn-primary" onclick="app.saveSecurityPasswords()">💾 Сохранить изменения паролей</button>
                     </div>
                 </div>
             </section>
@@ -524,8 +524,8 @@
                         </select>
                     </div>
                     <div class="form-group" style="margin-top: 0.75rem;">
-                        <label>Введите PIN-код мойщика:</label>
-                        <input type="password" id="workerPinInput" placeholder="По умолчанию: 0000" autocomplete="off">
+                        <label>Введите PIN-код:</label>
+                        <input type="password" id="workerPinInput" placeholder="Введите PIN-код" autocomplete="off">
                     </div>
                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                         <button class="btn btn-outline" onclick="app.hideWorkerSelector()">Назад</button>
@@ -537,8 +537,8 @@
                 <div id="adminPasswordBlock" style="display: none; margin-top: 1.5rem; background: var(--bg-page); padding: 1.25rem; border-radius: var(--radius); border: 1px solid var(--border);">
                     <h3 style="margin-bottom: 0.75rem;">Вход для Администратора</h3>
                     <div class="form-group">
-                        <label>Введите пароль администратора смены:</label>
-                        <input type="password" id="adminPasswordInput" placeholder="По умолчанию: 5555" autocomplete="off">
+                        <label>Введите пароль администратора:</label>
+                        <input type="password" id="adminPasswordInput" placeholder="Введите пароль" autocomplete="off">
                     </div>
                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                         <button class="btn btn-outline" onclick="app.hideAdminLoginForm()">Назад</button>
@@ -551,7 +551,7 @@
                     <h3 style="margin-bottom: 0.75rem;">Вход для Владельца (Директора)</h3>
                     <div class="form-group">
                         <label>Введите пароль владельца:</label>
-                        <input type="password" id="ownerPasswordInput" placeholder="По умолчанию: 1234" autocomplete="off">
+                        <input type="password" id="ownerPasswordInput" placeholder="Введите пароль" autocomplete="off">
                     </div>
                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                         <button class="btn btn-outline" onclick="app.hideOwnerLoginForm()">Назад</button>
