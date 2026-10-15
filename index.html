@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarWash Tracker | Управление автомойкой</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Шапка приложения -->
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="logo-icon">🚗💦</div>
+                <div>
+                    <h1>CarWash Tracker</h1>
+                    <span class="badge" id="currentRoleBadge">Режим: Загрузка...</span>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <div class="shift-info" id="shiftInfo">
+                    <span>Смена: <strong id="shiftDate">Сегодня</strong></span>
+                </div>
+                <button class="btn btn-outline" id="switchUserBtn" onclick="app.openAuthModal()">
+                    👤 Сменить кабинет
+                </button>
+            </div>
+        </header>
+
+        <!-- Навигация по вкладкам -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="activeOrders" onclick="app.switchTab('activeOrders')">
+                🚿 Текущая очередь и боксы (<span id="activeCount">0</span>)
+            </button>
+            <button class="nav-tab" data-tab="newOrder" onclick="app.switchTab('newOrder')">
+                ➕ Оформить заезд
+            </button>
+            <button class="nav-tab" data-tab="history" onclick="app.switchTab('history')">
+                📜 История и журнал
+            </button>
+            <button class="nav-tab owner-only" data-tab="finance" onclick="app.switchTab('finance')">
+                💰 Касса и Аналитика (Владелец)
+            </button>
+            <button class="nav-tab owner-only" data-tab="settings" onclick="app.switchTab('settings')">
+                ⚙️ Настройки и Персонал
+            </button>
+        </nav>
+
+        <!-- Основной контент -->
+        <main class="main-content">
+            <!-- 1. ТЕКУЩИЕ ЗАКАЗЫ И БОКСЫ -->
+            <section id="tab-activeOrders" class="tab-content active">
+                <div class="boxes-grid" id="boxesContainer">
+                    <!-- Карточки боксов рендерятся через JS -->
+                </div>
+
+                <div class="section-header">
+                    <h2>Машины в работе и очереди</h2>
+                    <button class="btn btn-primary" onclick="app.switchTab('newOrder')">
+                        + Добавить машину
+                    </button>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Авто / Госномер</th>
+                                    <th>Бокс</th>
+                                    <th>Услуги</th>
+                                    <th>Мойщик</th>
+                                    <th>Сумма</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activeOrdersTableBody">
+                                <!-- Список активных заказов -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. НОВЫЙ ЗАКАЗ (Оформление авто) -->
+            <section id="tab-newOrder" class="tab-content">
+                <div class="card form-card">
+                    <h2>Оформление нового авто</h2>
+                    <form id="orderForm" onsubmit="app.createOrder(event)">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="carPlate">Госномер авто *</label>
+                                <input type="text" id="carPlate" placeholder="например, 777 AAA 01" required autocomplete="off">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="carModel">Марка и модель</label>
+                                <input type="text" id="carModel" placeholder="например, Toyota Camry" autocomplete="off">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="carCategory">Класс / Кузов *</label>
+                                <select id="carCategory" required onchange="app.recalculateTotal()">
+                                    <option value="sedan">1 класс — Седан / Хэтчбек</option>
+                                    <option value="crossover">2 класс — Кроссовер / Универсал</option>
+                                    <option value="suv">3 класс — Внедорожник / Джип</option>
+                                    <option value="minivan">4 класс — Микроавтобус / Коммерческий</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="orderBox">Назначить бокс *</label>
+                                <select id="orderBox" required>
+                                    <!-- Динамически из списка боксов -->
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="orderWorker">Ответственный мойщик *</label>
+                                <select id="orderWorker" required>
+                                    <!-- Динамически из списка сотрудников -->
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="clientPhone">Телефон клиента (для SMS / WhatsApp)</label>
+                                <input type="tel" id="clientPhone" placeholder="+7 (___) ___-__-__">
+                            </div>
+                        </div>
+
+                        <div class="services-selection">
+                            <label class="block-label">Выберите услуги:</label>
+                            <div class="services-list" id="servicesCheckboxes">
+                                <!-- Чекбоксы услуг генерируются динамически -->
+                            </div>
+                        </div>
+
+                        <div class="order-summary-bar">
+                            <div class="total-calc">
+                                <span>Итого к оплате:</span>
+                                <strong id="calculatedPrice">0 ₸</strong>
+                            </div>
+                            <div class="form-buttons">
+                                <button type="button" class="btn btn-outline" onclick="app.switchTab('activeOrders')">Отмена</button>
+                                <button type="submit" class="btn btn-success">🚿 Запустить в работу</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <!-- 3. ИСТОРИЯ И ЖУРНАЛ -->
+            <section id="tab-history" class="tab-content">
+                <div class="section-header">
+                    <h2>Журнал всех вымытых автомобилей</h2>
+                    <div class="filter-group">
+                        <input type="date" id="historyDateFilter" onchange="app.renderHistory()">
+                        <button class="btn btn-outline" onclick="app.resetHistoryFilter()">Сбросить</button>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Дата/Время</th>
+                                    <th>Госномер</th>
+                                    <th>Авто</th>
+                                    <th>Услуги</th>
+                                    <th>Мойщик</th>
+                                    <th>Оплата</th>
+                                    <th>Сумма</th>
+                                    <th>Статус</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <!-- История -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. КАССА И АНАЛИТИКА (ТОЛЬКО ДЛЯ ВЛАДЕЛЬЦА) -->
+            <section id="tab-finance" class="tab-content owner-only">
+                <div class="finance-stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-title">Выручка за сегодня</span>
+                        <h3 id="statTodayIncome">0 ₸</h3>
+                        <small id="statTodayCount">0 машин</small>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-title">Выручка за месяц</span>
+                        <h3 id="statMonthIncome">0 ₸</h3>
+                        <small id="statMonthCount">0 машин</small>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-title">Зарплатный фонд (начислено)</span>
+                        <h3 id="statSalaryFund">0 ₸</h3>
+                        <small>по % ставкам мойщиков</small>
+                    </div>
+                    <div class="stat-card highlight">
+                        <span class="stat-title">Чистая касса мойки</span>
+                        <h3 id="statNetIncome">0 ₸</h3>
+                        <small>за вычетом зарплат</small>
+                    </div>
+                </div>
+
+                <div class="two-columns">
+                    <div class="card">
+                        <h3>Выработка по сотрудникам (зарплата)</h3>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Сотрудник</th>
+                                    <th>Машин</th>
+                                    <th>Ставка</th>
+                                    <th>К выплате</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workerSalaryTableBody"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <h3>Резервное копирование базы данных</h3>
+                        <p class="text-muted">Все ваши данные хранятся надежно. Вы можете скачать резервную копию или загрузить ее на другой компьютер.</p>
+                        <div class="btn-group">
+                            <button class="btn btn-outline" onclick="app.exportDatabase()">💾 Скачать базу (.json)</button>
+                            <label class="btn btn-outline file-label">
+                                📥 Восстановить базу
+                                <input type="file" id="importDatabaseFile" accept=".json" onchange="app.importDatabase(event)" style="display:none;">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. НАСТРОЙКИ (ТОЛЬКО ДЛЯ ВЛАДЕЛЬЦА) -->
+            <section id="tab-settings" class="tab-content owner-only">
+                <div class="two-columns">
+                    <div class="card">
+                        <h3>Список сотрудников (мойщиков)</h3>
+                        <form id="addWorkerForm" onsubmit="app.addWorker(event)" class="inline-form">
+                            <input type="text" id="newWorkerName" placeholder="Имя сотрудника" required>
+                            <input type="number" id="newWorkerPercent" placeholder="% от мойки" value="30" min="0" max="100" required>
+                            <button type="submit" class="btn btn-primary">+ Добавить</button>
+                        </form>
+                        <ul class="items-list" id="workersList"></ul>
+                    </div>
+
+                    <div class="card">
+                        <h3>Прайс-лист услуг (базовая цена для Седана)</h3>
+                        <form id="addServiceForm" onsubmit="app.addService(event)" class="inline-form">
+                            <input type="text" id="newServiceName" placeholder="Название услуги" required>
+                            <input type="number" id="newServicePrice" placeholder="Цена (седан)" required>
+                            <button type="submit" class="btn btn-primary">+ Добавить</button>
+                        </form>
+                        <ul class="items-list" id="servicesList"></ul>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 1.5rem;">
+                    <h3>Пароль Владельца</h3>
+                    <p class="text-muted">Этот пароль защищает доступ к кассе, настройкам и зарплатам.</p>
+                    <div class="inline-form">
+                        <input type="password" id="newOwnerPassword" placeholder="Новый пароль владельца">
+                        <button class="btn btn-primary" onclick="app.changeOwnerPassword()">Сохранить пароль</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- МОДАЛЬНОЕ ОКНО: АВТОРИЗАЦИЯ / СМЕНА КАБИНЕТА -->
+        <div class="modal-backdrop" id="authModal">
+            <div class="modal-window">
+                <h2>Вход в систему</h2>
+                <p class="text-muted">Выберите роль для продолжения работы:</p>
+
+                <div class="role-selector">
+                    <button class="role-card" onclick="app.loginAsWorker()">
+                        <div class="role-icon">🧽</div>
+                        <div class="role-title">Рабочий / Администратор</div>
+                        <p>Оформление машин, боксы, прием оплаты</p>
+                    </button>
+
+                    <button class="role-card" onclick="app.showOwnerLoginForm()">
+                        <div class="role-icon">👑</div>
+                        <div class="role-title">Владелец (Директор)</div>
+                        <p>Касса, полная статистика, зарплаты, настройки</p>
+                    </button>
+                </div>
+
+                <div id="ownerPasswordBlock" style="display: none; margin-top: 1.5rem;">
+                    <label>Введите пароль владельца:</label>
+                    <input type="password" id="ownerPasswordInput" placeholder="По умолчанию: 1234">
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                        <button class="btn btn-outline" onclick="app.hideOwnerLoginForm()">Назад</button>
+                        <button class="btn btn-primary" onclick="app.submitOwnerLogin()">Войти как Владелец</button>
+                    </div>
+                    <div style="margin-top: 0.75rem; text-align: center;">
+                        <a href="javascript:void(0)" onclick="app.forgotPasswordPrompt()" style="font-size: 0.8rem; color: var(--text-muted); text-decoration: underline;">
+                            Забыли пароль?
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- МОДАЛЬНОЕ ОКНО: ОПЛАТА И ЗАКРЫТИЕ ЗАКАЗА -->
+        <div class="modal-backdrop" id="paymentModal">
+            <div class="modal-window">
+                <h2>Расчет заказа #<span id="payOrderId"></span></h2>
+                <p id="payOrderInfo" class="text-muted"></p>
+
+                <div class="pay-amount-box">
+                    <span>Сумма к оплате:</span>
+                    <strong id="payTotalAmount">0 ₸</strong>
+                </div>
+
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label>Способ оплаты:</label>
+                    <div class="payment-types">
+                        <label class="pay-type-option">
+                            <input type="radio" name="payMethod" value="cash" checked>
+                            <span>💵 Наличные</span>
+                        </label>
+                        <label class="pay-type-option">
+                            <input type="radio" name="payMethod" value="card">
+                            <span>💳 Карта / POS</span>
+                        </label>
+                        <label class="pay-type-option">
+                            <input type="radio" name="payMethod" value="transfer">
+                            <span>📱 Kaspi / Перевод</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn btn-outline" onclick="app.closePaymentModal()">Отмена</button>
+                    <button class="btn btn-success" onclick="app.confirmPayment()">✅ Оплачено / Завершить</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
