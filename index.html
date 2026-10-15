@@ -447,11 +447,31 @@
                 </div>
 
                 <div class="card" style="margin-top: 1.5rem;">
-                    <h3>Пароль Владельца</h3>
-                    <p class="text-muted">Этот пароль защищает доступ к кассе, настройкам и общим зарплатам.</p>
-                    <div class="inline-form">
-                        <input type="password" id="newOwnerPassword" placeholder="Новый пароль владельца">
-                        <button class="btn btn-primary" onclick="app.changeOwnerPassword()">Сохранить пароль</button>
+                    <h3>Безопасность и пароли доступа</h3>
+                    <p class="text-muted">Установите пароли, чтобы клиенты и посторонние не могли зайти в служебные разделы.</p>
+                    
+                    <div class="form-grid" style="margin-top: 1rem;">
+                        <div class="form-group">
+                            <label for="settingAdminPassword">Пароль Администратора смены:</label>
+                            <input type="password" id="settingAdminPassword" placeholder="По умолчанию: 5555">
+                            <small class="text-muted">Дает доступ к приему авто и кассе смены</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="settingWorkerPin">PIN-код для Мойщиков:</label>
+                            <input type="password" id="settingWorkerPin" placeholder="По умолчанию: 0000">
+                            <small class="text-muted">Для входа мойщиков в свою рабочую смену</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="settingOwnerPassword">Пароль Владельца (Директора):</label>
+                            <input type="password" id="settingOwnerPassword" placeholder="По умолчанию: 1234">
+                            <small class="text-muted">Защищает общую прибыль и настройки</small>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1rem;">
+                        <button class="btn btn-primary" onclick="app.saveSecurityPasswords()">💾 Сохранить все пароли</button>
                     </div>
                 </div>
             </section>
@@ -469,48 +489,71 @@
                     <button class="role-card" onclick="app.loginAsGuest()">
                         <div class="role-icon">🚗</div>
                         <div class="role-title">Клиент / Гость</div>
-                        <p>Проверка статуса авто и прайс-лист</p>
+                        <p>Вход без пароля: статус авто и прайс</p>
                     </button>
 
                     <!-- Режим Мойщика -->
                     <button class="role-card" onclick="app.showWorkerSelector()">
                         <div class="role-icon">🧽</div>
                         <div class="role-title">Мойщик</div>
-                        <p>Только мои машины и моя выработка</p>
+                        <p>Вход по PIN-коду: мои задачи и заработок</p>
                     </button>
 
                     <!-- Режим Администратора -->
-                    <button class="role-card" onclick="app.loginAsAdmin()">
+                    <button class="role-card" onclick="app.showAdminLoginForm()">
                         <div class="role-icon">📋</div>
                         <div class="role-title">Администратор</div>
-                        <p>Прием авто, боксы, расчет заказов</p>
+                        <p>Вход по паролю: прием авто и боксы</p>
                     </button>
 
                     <!-- Режим Владельца -->
                     <button class="role-card" onclick="app.showOwnerLoginForm()">
                         <div class="role-icon">👑</div>
                         <div class="role-title">Владелец</div>
-                        <p>Полная касса, прибыль, зарплаты, настройки</p>
+                        <p>Вход по паролю: касса, прибыль, настройки</p>
                     </button>
                 </div>
 
-                <!-- Блок выбора конкретного мойщика -->
-                <div id="workerSelectBlock" style="display: none; margin-top: 1.5rem;">
-                    <label>Выберите себя из списка сотрудников:</label>
-                    <select id="workerModalSelect" style="width: 100%; margin-top: 0.5rem;">
-                        <!-- Заполняется динамически -->
-                    </select>
+                <!-- Блок входа мойщика (Выбор сотрудника + PIN) -->
+                <div id="workerSelectBlock" style="display: none; margin-top: 1.5rem; background: var(--bg-page); padding: 1.25rem; border-radius: var(--radius); border: 1px solid var(--border);">
+                    <h3 style="margin-bottom: 0.75rem;">Вход для Мойщика</h3>
+                    <div class="form-group">
+                        <label>Выберите сотрудника:</label>
+                        <select id="workerModalSelect" style="width: 100%;">
+                            <!-- Заполняется динамически -->
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-top: 0.75rem;">
+                        <label>Введите PIN-код мойщика:</label>
+                        <input type="password" id="workerPinInput" placeholder="По умолчанию: 0000" autocomplete="off">
+                    </div>
                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                         <button class="btn btn-outline" onclick="app.hideWorkerSelector()">Назад</button>
                         <button class="btn btn-primary" onclick="app.confirmWorkerLogin()">Войти в смену</button>
                     </div>
                 </div>
 
-                <!-- Блок ввода пароля владельца -->
-                <div id="ownerPasswordBlock" style="display: none; margin-top: 1.5rem;">
-                    <label>Введите пароль владельца:</label>
-                    <input type="password" id="ownerPasswordInput" placeholder="По умолчанию: 1234">
-                    <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                <!-- Блок входа администратора (Пароль админа) -->
+                <div id="adminPasswordBlock" style="display: none; margin-top: 1.5rem; background: var(--bg-page); padding: 1.25rem; border-radius: var(--radius); border: 1px solid var(--border);">
+                    <h3 style="margin-bottom: 0.75rem;">Вход для Администратора</h3>
+                    <div class="form-group">
+                        <label>Введите пароль администратора смены:</label>
+                        <input type="password" id="adminPasswordInput" placeholder="По умолчанию: 5555" autocomplete="off">
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                        <button class="btn btn-outline" onclick="app.hideAdminLoginForm()">Назад</button>
+                        <button class="btn btn-primary" onclick="app.submitAdminLogin()">Войти как Администратор</button>
+                    </div>
+                </div>
+
+                <!-- Блок входа владельца (Пароль владельца) -->
+                <div id="ownerPasswordBlock" style="display: none; margin-top: 1.5rem; background: var(--bg-page); padding: 1.25rem; border-radius: var(--radius); border: 1px solid var(--border);">
+                    <h3 style="margin-bottom: 0.75rem;">Вход для Владельца (Директора)</h3>
+                    <div class="form-group">
+                        <label>Введите пароль владельца:</label>
+                        <input type="password" id="ownerPasswordInput" placeholder="По умолчанию: 1234" autocomplete="off">
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                         <button class="btn btn-outline" onclick="app.hideOwnerLoginForm()">Назад</button>
                         <button class="btn btn-primary" onclick="app.submitOwnerLogin()">Войти как Владелец</button>
                     </div>

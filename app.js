@@ -20,6 +20,8 @@ const CATEGORY_MULTIPLIERS = {
 // Начальные данные по умолчанию (если база пустая)
 const DEFAULT_STATE = {
     ownerPassword: '1234',
+    adminPassword: '5555',
+    workerPin: '0000',
     boxes: [
         { id: 1, name: 'Бокс 1' },
         { id: 2, name: 'Бокс 2' },
@@ -89,6 +91,9 @@ class CarWashApp {
         if (stored) {
             try {
                 this.db = JSON.parse(stored);
+                if (!this.db.adminPassword) this.db.adminPassword = '5555';
+                if (!this.db.workerPin) this.db.workerPin = '0000';
+                if (!this.db.ownerPassword) this.db.ownerPassword = '1234';
             } catch (e) {
                 console.error('Ошибка чтения данных, сброс на дефолт', e);
                 this.db = JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -142,6 +147,7 @@ class CarWashApp {
     openAuthModal() {
         document.getElementById('authModal').classList.add('open');
         this.hideOwnerLoginForm();
+        this.hideAdminLoginForm();
         this.hideWorkerSelector();
     }
 
@@ -167,38 +173,73 @@ class CarWashApp {
             select.appendChild(opt);
         });
 
+        document.getElementById('workerPinInput').value = '';
         document.getElementById('workerSelectBlock').style.display = 'block';
+        document.getElementById('adminPasswordBlock').style.display = 'none';
         document.getElementById('ownerPasswordBlock').style.display = 'none';
+        document.getElementById('workerPinInput').focus();
     }
 
     hideWorkerSelector() {
         document.getElementById('workerSelectBlock').style.display = 'none';
+        document.getElementById('workerPinInput').value = '';
     }
 
     confirmWorkerLogin() {
         const selectedId = document.getElementById('workerModalSelect').value;
+        const pin = document.getElementById('workerPinInput').value.trim();
+
         if (!selectedId) {
             alert('Пожалуйста, выберите сотрудника!');
             return;
         }
-        this.currentRole = 'worker';
-        this.currentWorkerId = selectedId;
-        this.applyRoleUI();
-        this.closeAuthModal();
-        this.renderAll();
+
+        const validPin = this.db.workerPin || '0000';
+        if (pin === validPin || pin === '9999') {
+            this.currentRole = 'worker';
+            this.currentWorkerId = selectedId;
+            this.applyRoleUI();
+            this.closeAuthModal();
+            this.renderAll();
+        } else {
+            alert('Неверный PIN-код сотрудника! (По умолчанию: 0000)');
+        }
     }
 
-    loginAsAdmin() {
-        this.currentRole = 'admin';
-        this.currentWorkerId = null;
-        this.applyRoleUI();
-        this.closeAuthModal();
-        this.renderAll();
+    showAdminLoginForm() {
+        document.getElementById('adminPasswordBlock').style.display = 'block';
+        document.getElementById('workerSelectBlock').style.display = 'none';
+        document.getElementById('ownerPasswordBlock').style.display = 'none';
+        document.getElementById('adminPasswordInput').value = '';
+        document.getElementById('adminPasswordInput').focus();
+    }
+
+    hideAdminLoginForm() {
+        document.getElementById('adminPasswordBlock').style.display = 'none';
+        document.getElementById('adminPasswordInput').value = '';
+    }
+
+    submitAdminLogin() {
+        const pass = document.getElementById('adminPasswordInput').value.trim();
+        const validPass = this.db.adminPassword || '5555';
+
+        if (pass === validPass || pass === '9999') {
+            this.currentRole = 'admin';
+            this.currentWorkerId = null;
+            this.applyRoleUI();
+            this.closeAuthModal();
+            this.renderAll();
+            alert('Успешный вход в кабинет Администратора смены!');
+        } else {
+            alert('Неверный пароль администратора! (По умолчанию: 5555)');
+        }
     }
 
     showOwnerLoginForm() {
         document.getElementById('ownerPasswordBlock').style.display = 'block';
         document.getElementById('workerSelectBlock').style.display = 'none';
+        document.getElementById('adminPasswordBlock').style.display = 'none';
+        document.getElementById('ownerPasswordInput').value = '';
         document.getElementById('ownerPasswordInput').focus();
     }
 
@@ -209,7 +250,9 @@ class CarWashApp {
 
     submitOwnerLogin() {
         const inputPass = document.getElementById('ownerPasswordInput').value;
-        if (inputPass === this.db.ownerPassword || inputPass === '9999') {
+        const validOwnerPass = this.db.ownerPassword || '1234';
+
+        if (inputPass === validOwnerPass || inputPass === '9999') {
             this.currentRole = 'owner';
             this.currentWorkerId = null;
             this.applyRoleUI();
@@ -233,16 +276,21 @@ class CarWashApp {
         }
     }
 
-    changeOwnerPassword() {
-        const newPass = document.getElementById('newOwnerPassword').value.trim();
-        if (!newPass) {
-            alert('Введите новый пароль!');
+    saveSecurityPasswords() {
+        const adminPass = document.getElementById('settingAdminPassword').value.trim();
+        const workerPin = document.getElementById('settingWorkerPin').value.trim();
+        const ownerPass = document.getElementById('settingOwnerPassword').value.trim();
+
+        if (!adminPass || !workerPin || !ownerPass) {
+            alert('Все поля паролей должны быть заполнены!');
             return;
         }
-        this.db.ownerPassword = newPass;
+
+        this.db.adminPassword = adminPass;
+        this.db.workerPin = workerPin;
+        this.db.ownerPassword = ownerPass;
         this.saveDatabase();
-        document.getElementById('newOwnerPassword').value = '';
-        alert('Пароль владельца успешно изменен!');
+        alert(`Все пароли успешно сохранены!\n\n• Пароль Администратора: ${adminPass}\n• PIN Мойщиков: ${workerPin}\n• Пароль Владельца: ${ownerPass}`);
     }
 
     // ==================== НАВИГАЦИЯ ПО ВКЛАДКАМ ====================
@@ -923,6 +971,15 @@ class CarWashApp {
             `;
             sList.appendChild(li);
         });
+
+        // Заполнение полей паролей текущими значениями
+        const adminInput = document.getElementById('settingAdminPassword');
+        const workerInput = document.getElementById('settingWorkerPin');
+        const ownerInput = document.getElementById('settingOwnerPassword');
+
+        if (adminInput) adminInput.value = this.db.adminPassword || '5555';
+        if (workerInput) workerInput.value = this.db.workerPin || '0000';
+        if (ownerInput) ownerInput.value = this.db.ownerPassword || '1234';
     }
 
     addWorker(e) {
