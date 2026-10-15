@@ -3,90 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CarWash Tracker — профессиональная система управления автомойкой: очередь, боксы, расчет заказов и онлайн-статус для клиентов.">
     <title>CarWash Tracker | Управление автомойкой</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="role-guest">
+    <noscript>
+        <div style="background:#fee2e2; color:#991b1b; padding:1.5rem; text-align:center; font-weight:600;">
+            ⚠️ Для работы приложения CarWash Tracker необходимо включить JavaScript в браузере.
+        </div>
+    </noscript>
+
     <div id="app">
         <!-- Шапка приложения -->
         <header class="app-header">
             <div class="logo-area">
-                <div class="logo-icon">🚗💦</div>
+                <div class="logo-icon" aria-hidden="true">🚗💦</div>
                 <div>
-                    <h1>CarWash Tracker</h1>
-                    <span class="badge" id="currentRoleBadge">Режим: Гость / Клиент</span>
+                    <h1 class="logo-title">CarWash Tracker</h1>
+                    <div class="badges-row">
+                        <span class="badge" id="currentRoleBadge">Режим: Гость / Клиент</span>
+                        <span class="badge badge-cloud" id="cloudStatusBadge" title="Статус синхронизации">⚡ Локальный режим</span>
+                    </div>
                 </div>
             </div>
 
             <div class="header-actions">
                 <div class="shift-info" id="shiftInfo">
-                    <span><strong id="shiftDate">Сегодня</strong></span>
+                    <span id="shiftDate">Загрузка...</span>
                 </div>
-                <button class="btn btn-outline" id="switchUserBtn" onclick="app.openAuthModal()">
+                <button class="btn btn-outline" id="switchUserBtn" type="button" onclick="app.openAuthModal()">
                     👤 Сменить режим
                 </button>
             </div>
         </header>
 
         <!-- Навигация по вкладкам -->
-        <nav class="nav-tabs" id="navTabsContainer">
+        <nav class="nav-tabs" id="navTabsContainer" aria-label="Разделы приложения">
             <!-- 1. Вкладки ГОСТЯ -->
-            <button class="nav-tab role-tab-guest active" data-tab="guestSearch" onclick="app.switchTab('guestSearch')">
+            <button class="nav-tab role-tab-guest active" data-tab="guestSearch" type="button" onclick="app.switchTab('guestSearch')">
                 🔍 Статус моего авто
             </button>
-            <button class="nav-tab role-tab-guest" data-tab="guestPrices" onclick="app.switchTab('guestPrices')">
+            <button class="nav-tab role-tab-guest" data-tab="guestPrices" type="button" onclick="app.switchTab('guestPrices')">
                 📋 Прайс-лист и цены
             </button>
-            <button class="nav-tab role-tab-guest" data-tab="guestContacts" onclick="app.switchTab('guestContacts')">
+            <button class="nav-tab role-tab-guest" data-tab="guestContacts" type="button" onclick="app.switchTab('guestContacts')">
                 📍 Контакты мойки
             </button>
 
             <!-- 2. Вкладки МОЙЩИКА -->
-            <button class="nav-tab role-tab-worker" data-tab="workerTasks" onclick="app.switchTab('workerTasks')">
+            <button class="nav-tab role-tab-worker" data-tab="workerTasks" type="button" onclick="app.switchTab('workerTasks')">
                 🚿 Мои назначенные авто
             </button>
-            <button class="nav-tab role-tab-worker" data-tab="workerHistory" onclick="app.switchTab('workerHistory')">
+            <button class="nav-tab role-tab-worker" data-tab="workerHistory" type="button" onclick="app.switchTab('workerHistory')">
                 📜 Мои выполненные мойки
             </button>
 
             <!-- 3. Вкладки АДМИНИСТРАТОРА И ВЛАДЕЛЬЦА -->
-            <button class="nav-tab role-tab-admin" data-tab="activeOrders" onclick="app.switchTab('activeOrders')">
+            <button class="nav-tab role-tab-admin" data-tab="activeOrders" type="button" onclick="app.switchTab('activeOrders')">
                 🚿 Боксы и очередь (<span id="activeCount">0</span>)
             </button>
-            <button class="nav-tab role-tab-admin" data-tab="newOrder" onclick="app.switchTab('newOrder')">
+            <button class="nav-tab role-tab-admin" data-tab="newOrder" type="button" onclick="app.switchTab('newOrder')">
                 ➕ Оформить заезд
             </button>
-            <button class="nav-tab role-tab-admin" data-tab="history" onclick="app.switchTab('history')">
+            <button class="nav-tab role-tab-admin" data-tab="history" type="button" onclick="app.switchTab('history')">
                 📜 Общий журнал
             </button>
 
             <!-- 4. Вкладки ТОЛЬКО ВЛАДЕЛЬЦА -->
-            <button class="nav-tab role-tab-owner" data-tab="finance" onclick="app.switchTab('finance')">
+            <button class="nav-tab role-tab-owner" data-tab="finance" type="button" onclick="app.switchTab('finance')">
                 💰 Касса и Аналитика
             </button>
-            <button class="nav-tab role-tab-owner" data-tab="settings" onclick="app.switchTab('settings')">
-                ⚙️ Настройки и Персонал
+            <button class="nav-tab role-tab-owner" data-tab="settings" type="button" onclick="app.switchTab('settings')">
+                ⚙️ Настройки и Безопасность
             </button>
         </nav>
 
         <!-- Основной контент -->
-        <main class="main-content">
+        <main class="main-content" id="mainContent">
 
             <!-- ===================== ЭКРАНЫ ГОСТЯ (КЛИЕНТА) ===================== -->
             
-            <!-- Поиск статуса авто гостем -->
-            <section id="tab-guestSearch" class="tab-content active">
+            <section id="tab-guestSearch" class="tab-content active" aria-labelledby="guestSearchTitle">
                 <div class="card guest-search-card">
-                    <h2>Проверка готовности автомобиля</h2>
-                    <p class="text-muted">Введите госномер вашего авто, чтобы узнать статус мойки:</p>
+                    <h2 id="guestSearchTitle">Проверка готовности автомобиля</h2>
+                    <p class="text-muted">Введите госномер вашего авто, чтобы узнать статус мойки в реальном времени:</p>
                     
                     <form class="guest-search-form" onsubmit="app.searchCarStatus(event)">
-                        <input type="text" id="guestSearchPlate" placeholder="например, 777 AAA 01" required autocomplete="off">
-                        <button type="submit" class="btn btn-primary">Проверить статус</button>
+                        <input type="text" id="guestSearchPlate" placeholder="например, 777 AAA 01" required autocomplete="off" maxlength="15" aria-label="Госномер автомобиля">
+                        <button type="submit" class="btn btn-primary" id="guestSearchBtn">Проверить</button>
                     </form>
 
-                    <div id="guestSearchResult" class="guest-result-box" style="display: none;">
+                    <div id="guestSearchResult" class="guest-result-box" style="display: none;" role="region" aria-live="polite">
                         <!-- Результат поиска авто -->
                     </div>
                 </div>
@@ -94,18 +103,17 @@
                 <div class="boxes-overview-guest">
                     <h3>Занятость боксов прямо сейчас:</h3>
                     <div class="boxes-grid" id="guestBoxesOverview">
-                        <!-- Мини карточки боксов для клиентов -->
+                        <!-- Мини-карточки боксов -->
                     </div>
                 </div>
             </section>
 
-            <!-- Прайс-лист для гостя -->
-            <section id="tab-guestPrices" class="tab-content">
+            <section id="tab-guestPrices" class="tab-content" aria-labelledby="guestPricesTitle">
                 <div class="card">
                     <div class="section-header">
-                        <h2>Прайс-лист услуг</h2>
+                        <h2 id="guestPricesTitle">Прайс-лист услуг</h2>
                         <div class="filter-group">
-                            <label>Ваш кузов: </label>
+                            <label for="guestPriceCategory">Класс вашего авто: </label>
                             <select id="guestPriceCategory" onchange="app.renderGuestPrices()">
                                 <option value="sedan">1 класс — Седан / Хэтчбек</option>
                                 <option value="crossover">2 класс — Кроссовер / Универсал</option>
@@ -130,37 +138,36 @@
                 </div>
             </section>
 
-            <!-- Контакты для гостя -->
-            <section id="tab-guestContacts" class="tab-content">
+            <section id="tab-guestContacts" class="tab-content" aria-labelledby="guestContactsTitle">
                 <div class="card">
-                    <h2>Контакты и график работы</h2>
-                    <div class="contacts-grid">
+                    <h2 id="guestContactsTitle">Контакты и график работы</h2>
+                    <div class="contacts-grid" id="guestContactsView">
                         <div class="contact-item">
-                            <div class="contact-icon">📍</div>
+                            <div class="contact-icon" aria-hidden="true">📍</div>
                             <div>
                                 <strong>Адрес:</strong>
-                                <p>г. Астана / Алматы, ул. Автомобильная, 12/1</p>
+                                <p id="viewContactAddress">ул. Автомобильная, 12/1</p>
                             </div>
                         </div>
                         <div class="contact-item">
-                            <div class="contact-icon">🕒</div>
+                            <div class="contact-icon" aria-hidden="true">🕒</div>
                             <div>
                                 <strong>График работы:</strong>
-                                <p>Ежедневно с 08:00 до 23:00 (без выходных)</p>
+                                <p id="viewContactHours">Ежедневно с 08:00 до 23:00</p>
                             </div>
                         </div>
                         <div class="contact-item">
-                            <div class="contact-icon">📞</div>
+                            <div class="contact-icon" aria-hidden="true">📞</div>
                             <div>
                                 <strong>Телефон / WhatsApp:</strong>
-                                <p>+7 (777) 123-45-67</p>
+                                <p id="viewContactPhone">+7 (777) 123-45-67</p>
                             </div>
                         </div>
                         <div class="contact-item">
-                            <div class="contact-icon">☕</div>
+                            <div class="contact-icon" aria-hidden="true">☕</div>
                             <div>
-                                <strong>Зона ожидания:</strong>
-                                <p>Комфортный зал, зерновой кофе, бесплатный Wi-Fi, ТВ</p>
+                                <strong>Комфорт:</strong>
+                                <p id="viewContactNotes">Комфортная зона ожидания, зерновой кофе, бесплатный Wi-Fi</p>
                             </div>
                         </div>
                     </div>
@@ -168,14 +175,13 @@
             </section>
 
 
-            <!-- ===================== ЭКРАНЫ МОЙЩИКА (РАБОЧЕГО) ===================== -->
+            <!-- ===================== ЭКРАНЫ МОЙЩИКА ===================== -->
             
-            <!-- Мои назначенные машины -->
-            <section id="tab-workerTasks" class="tab-content">
+            <section id="tab-workerTasks" class="tab-content" aria-labelledby="workerTasksTitle">
                 <div class="worker-welcome-bar card">
                     <div>
                         <span class="text-muted">Рабочая смена мойщика:</span>
-                        <h2 id="workerActiveName">Выберите сотрудника</h2>
+                        <h2 id="workerActiveName">Не выбран</h2>
                     </div>
                     <div class="worker-quick-stats">
                         <div class="stat-mini">
@@ -190,19 +196,18 @@
                 </div>
 
                 <div class="section-header">
-                    <h2>Мои машины в работе</h2>
+                    <h2 id="workerTasksTitle">Мои назначенные автомобили</h2>
                 </div>
 
                 <div id="workerAssignedCards" class="worker-cards-grid">
-                    <!-- Карточки задач мойщика -->
+                    <!-- Задачи мойщика -->
                 </div>
             </section>
 
-            <!-- Моя история моек -->
-            <section id="tab-workerHistory" class="tab-content">
+            <section id="tab-workerHistory" class="tab-content" aria-labelledby="workerHistoryTitle">
                 <div class="card">
-                    <h2>Мои выполненные автомобили за сегодня</h2>
-                    <p class="text-muted">Список машин, которые вы помыли, и начисленный заработок:</p>
+                    <h2 id="workerHistoryTitle">Мои выполненные автомобили за сегодня</h2>
+                    <p class="text-muted">Список вымытых вами машин и зафиксированный заработок:</p>
                     <div class="table-responsive">
                         <table class="data-table">
                             <thead>
@@ -227,15 +232,14 @@
 
             <!-- ===================== ЭКРАНЫ АДМИНИСТРАТОРА И ВЛАДЕЛЬЦА ===================== -->
 
-            <!-- 1. ТЕКУЩИЕ ЗАКАЗЫ И БОКСЫ -->
-            <section id="tab-activeOrders" class="tab-content">
+            <section id="tab-activeOrders" class="tab-content" aria-labelledby="activeOrdersTitle">
                 <div class="boxes-grid" id="boxesContainer">
-                    <!-- Карточки боксов -->
+                    <!-- Боксы -->
                 </div>
 
                 <div class="section-header">
-                    <h2>Машины в работе и очереди</h2>
-                    <button class="btn btn-primary" onclick="app.switchTab('newOrder')">
+                    <h2 id="activeOrdersTitle">Машины в работе и очереди</h2>
+                    <button class="btn btn-primary" type="button" onclick="app.switchTab('newOrder')">
                         + Оформить заезд
                     </button>
                 </div>
@@ -256,28 +260,27 @@
                                 </tr>
                             </thead>
                             <tbody id="activeOrdersTableBody">
-                                <!-- Список активных заказов -->
+                                <!-- Активные заказы -->
                             </tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
-            <!-- 2. НОВЫЙ ЗАКАЗ (Оформление авто - ТОЛЬКО ДЛЯ АДМИНА/ВЛАДЕЛЬЦА) -->
-            <section id="tab-newOrder" class="tab-content">
+            <section id="tab-newOrder" class="tab-content" aria-labelledby="newOrderTitle">
                 <div class="card form-card">
-                    <h2>Оформление нового авто</h2>
-                    <p class="text-muted">Заполните данные для запуска автомобиля в бокс:</p>
+                    <h2 id="newOrderTitle">Оформление нового авто</h2>
+                    <p class="text-muted">Заполните данные для постановки автомобиля в бокс:</p>
                     <form id="orderForm" onsubmit="app.createOrder(event)">
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="carPlate">Госномер авто *</label>
-                                <input type="text" id="carPlate" placeholder="например, 777 AAA 01" required autocomplete="off">
+                                <input type="text" id="carPlate" placeholder="например, 777 AAA 01" required autocomplete="off" maxlength="15">
                             </div>
 
                             <div class="form-group">
                                 <label for="carModel">Марка и модель</label>
-                                <input type="text" id="carModel" placeholder="например, Toyota Camry" autocomplete="off">
+                                <input type="text" id="carModel" placeholder="например, Toyota Camry" autocomplete="off" maxlength="40">
                             </div>
 
                             <div class="form-group">
@@ -305,15 +308,15 @@
                             </div>
 
                             <div class="form-group">
-                                <label for="clientPhone">Телефон клиента (для SMS / связи)</label>
-                                <input type="tel" id="clientPhone" placeholder="+7 (___) ___-__-__">
+                                <label for="clientPhone">Телефон клиента</label>
+                                <input type="tel" id="clientPhone" placeholder="+7 (___) ___-__-__" autocomplete="off" maxlength="20">
                             </div>
                         </div>
 
                         <div class="services-selection">
                             <label class="block-label">Выберите услуги:</label>
                             <div class="services-list" id="servicesCheckboxes">
-                                <!-- Чекбоксы услуг -->
+                                <!-- Услуги -->
                             </div>
                         </div>
 
@@ -331,13 +334,13 @@
                 </div>
             </section>
 
-            <!-- 3. ИСТОРИЯ И ЖУРНАЛ (ДЛЯ АДМИНА И ВЛАДЕЛЬЦА) -->
-            <section id="tab-history" class="tab-content">
+            <section id="tab-history" class="tab-content" aria-labelledby="historyTitle">
                 <div class="section-header">
-                    <h2>Общий журнал вымытых автомобилей</h2>
+                    <h2 id="historyTitle">Общий журнал вымытых автомобилей</h2>
                     <div class="filter-group">
+                        <label for="historyDateFilter">Дата: </label>
                         <input type="date" id="historyDateFilter" onchange="app.renderHistory()">
-                        <button class="btn btn-outline" onclick="app.resetHistoryFilter()">Сбросить</button>
+                        <button class="btn btn-outline" type="button" onclick="app.resetHistoryFilter()">Сбросить</button>
                     </div>
                 </div>
 
@@ -365,10 +368,9 @@
             </section>
 
 
-            <!-- ===================== ЭКРАНЫ ТОЛЬКО ВЛАДЕЛЬЦА ===================== -->
+            <!-- ===================== ЭКРАНЫ ВЛАДЕЛЬЦА ===================== -->
 
-            <!-- 4. КАССА И АНАЛИТИКА -->
-            <section id="tab-finance" class="tab-content">
+            <section id="tab-finance" class="tab-content" aria-labelledby="financeTitle">
                 <div class="finance-stats-grid">
                     <div class="stat-card">
                         <span class="stat-title">Выручка за сегодня</span>
@@ -381,20 +383,20 @@
                         <small id="statMonthCount">0 машин</small>
                     </div>
                     <div class="stat-card">
-                        <span class="stat-title">Зарплатный фонд (начислено)</span>
+                        <span class="stat-title">Зарплатный фонд за месяц</span>
                         <h3 id="statSalaryFund">0 ₸</h3>
-                        <small>по % ставкам мойщиков</small>
+                        <small>начислено мойщикам в этом месяце</small>
                     </div>
                     <div class="stat-card highlight">
-                        <span class="stat-title">Чистая касса мойки</span>
+                        <span class="stat-title">Чистая касса мойки (месяц)</span>
                         <h3 id="statNetIncome">0 ₸</h3>
-                        <small>за вычетом зарплат</small>
+                        <small>выручка месяца минус зарплаты месяца</small>
                     </div>
                 </div>
 
                 <div class="two-columns">
                     <div class="card">
-                        <h3>Выработка по сотрудникам (зарплата)</h3>
+                        <h3>Выработка по сотрудникам (текущий месяц)</h3>
                         <table class="data-table">
                             <thead>
                                 <tr>
@@ -409,12 +411,20 @@
                     </div>
 
                     <div class="card">
-                        <h3>Резервное копирование базы данных</h3>
-                        <p class="text-muted">Все данные хранятся локально. Вы можете скачать резервную копию или загрузить ее на другой компьютер.</p>
-                        <div class="btn-group" style="display:flex; gap:0.5rem; margin-top:1rem;">
-                            <button class="btn btn-outline" onclick="app.exportDatabase()">💾 Скачать базу (.json)</button>
+                        <h3>Резервное копирование и экспорт</h3>
+                        <p class="text-muted">Все данные защищены. При экспорте пароли не выгружаются в открытом виде.</p>
+                        
+                        <div class="form-group" style="margin: 1rem 0;">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="maskPhonesCheckbox" checked>
+                                <span>Маскировать телефоны клиентов в экспорте (+7 *** *** 45 67)</span>
+                            </label>
+                        </div>
+
+                        <div class="btn-group" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                            <button class="btn btn-outline" type="button" onclick="app.exportDatabase()">💾 Скачать базу (.json)</button>
                             <label class="btn btn-outline file-label" style="cursor:pointer;">
-                                📥 Восстановить базу
+                                📥 Восстановить из файла
                                 <input type="file" id="importDatabaseFile" accept=".json" onchange="app.importDatabase(event)" style="display:none;">
                             </label>
                         </div>
@@ -422,14 +432,39 @@
                 </div>
             </section>
 
-            <!-- 5. НАСТРОЙКИ (ТОЛЬКО ВЛАДЕЛЕЦ) -->
-            <section id="tab-settings" class="tab-content">
-                <div class="two-columns">
+            <section id="tab-settings" class="tab-content" aria-labelledby="settingsTitle">
+                <!-- 1. ОБЛАЧНАЯ СИНХРОНИЗАЦИЯ (МУЛЬТИУСТРОЙСТВО) -->
+                <div class="card highlight-card">
+                    <div class="cloud-header">
+                        <div>
+                            <h3>☁️ Облачная синхронизация между устройствами</h3>
+                            <p class="text-muted">Позволяет администратору оформлять машины с компьютера, а клиентам и мойщикам смотреть статусы со своих телефонов в реальном времени.</p>
+                        </div>
+                        <span class="badge" id="cloudStatusBadgeDetail">Локально</span>
+                    </div>
+
+                    <div class="form-grid" style="margin-top: 1rem;">
+                        <div class="form-group">
+                            <label for="firebaseDbUrl">Firebase Realtime Database URL:</label>
+                            <input type="url" id="firebaseDbUrl" placeholder="https://your-carwash-default-rtdb.firebaseio.com">
+                            <small class="text-muted">Бесплатная база Google Firebase (создается за 2 мин в консоли Firebase).</small>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:0.5rem; margin-top:1rem; flex-wrap:wrap;">
+                        <button class="btn btn-primary" type="button" onclick="app.saveCloudConfig()">Подключить облако</button>
+                        <button class="btn btn-outline" type="button" onclick="app.disableCloudSync()">Работать только локально</button>
+                    </div>
+                </div>
+
+                <!-- 2. ПЕРСОНАЛ И ПРАЙС -->
+                <div class="two-columns" style="margin-top: 1.5rem;">
                     <div class="card">
-                        <h3>Список сотрудников (мойщиков)</h3>
+                        <h3>Сотрудники (мойщики)</h3>
                         <form id="addWorkerForm" onsubmit="app.addWorker(event)" class="inline-form">
-                            <input type="text" id="newWorkerName" placeholder="Имя сотрудника" required>
-                            <input type="number" id="newWorkerPercent" placeholder="% от мойки" value="30" min="0" max="100" required>
+                            <input type="text" id="newWorkerName" placeholder="Имя" required maxlength="30">
+                            <input type="number" id="newWorkerPercent" placeholder="% ставка" value="30" min="0" max="100" required>
+                            <input type="password" id="newWorkerPin" placeholder="Личный PIN (4 цифры)" minlength="4" maxlength="8" inputmode="numeric">
                             <button type="submit" class="btn btn-primary">+ Добавить</button>
                         </form>
                         <ul class="items-list" id="workersList"></ul>
@@ -438,142 +473,216 @@
                     <div class="card">
                         <h3>Прайс-лист услуг (базовая цена для Седана)</h3>
                         <form id="addServiceForm" onsubmit="app.addService(event)" class="inline-form">
-                            <input type="text" id="newServiceName" placeholder="Название услуги" required>
-                            <input type="number" id="newServicePrice" placeholder="Цена (седан)" required>
+                            <input type="text" id="newServiceName" placeholder="Название услуги" required maxlength="40">
+                            <input type="number" id="newServicePrice" placeholder="Цена (седан)" min="0" step="50" required>
                             <button type="submit" class="btn btn-primary">+ Добавить</button>
                         </form>
                         <ul class="items-list" id="servicesList"></ul>
                     </div>
                 </div>
 
+                <!-- 3. БЕЗОПАСНОСТЬ И ХЭШИРОВАННЫЕ ПАРОЛИ -->
                 <div class="card" style="margin-top: 1.5rem;">
-                    <h3>🔐 База доступов и пароли (Только для Владельца)</h3>
-                    <p class="text-muted">Здесь хранятся все пароли системы. Вы можете в любой момент посмотреть их или изменить. В окне входа эти пароли скрыты от посторонних.</p>
+                    <h3>🔐 Управление паролями доступа</h3>
+                    <p class="text-muted">Все пароли хранятся в зашифрованном виде (SHA-256 с солью). Здесь вы можете задать новые пароли.</p>
                     
-                    <div class="form-grid" style="margin-top: 1.25rem;">
-                        <div class="form-group">
-                            <label for="settingAdminPassword">Пароль Администратора смены:</label>
-                            <input type="text" id="settingAdminPassword" placeholder="Пароль администратора">
-                            <small class="text-muted">Для оформления авто и кассы смены</small>
+                    <form onsubmit="app.saveSecurityPasswords(event)" style="margin-top: 1rem;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="changeOwnerPassword">Новый пароль Владельца:</label>
+                                <input type="password" id="changeOwnerPassword" placeholder="Оставьте пустым, если не меняете" autocomplete="new-password">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="changeAdminPassword">Новый пароль Администратора:</label>
+                                <input type="password" id="changeAdminPassword" placeholder="Оставьте пустым, если не меняете" autocomplete="new-password">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="changeWorkerPin">Общий PIN-код Мойщиков:</label>
+                                <input type="password" id="changeWorkerPin" placeholder="Оставьте пустым, если не меняете" inputmode="numeric" autocomplete="new-password">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="changeSecretRecovery">Секретное кодовое слово (для сброса):</label>
+                                <input type="password" id="changeSecretRecovery" placeholder="Только для восстановления пароля" autocomplete="new-password">
+                            </div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="settingWorkerPin">PIN-код для Мойщиков:</label>
-                            <input type="text" id="settingWorkerPin" placeholder="PIN мойщиков">
-                            <small class="text-muted">Для входа мойщиков в свои задачи</small>
+                        <div style="margin-top: 1rem;">
+                            <button class="btn btn-primary" type="submit">💾 Сохранить новые пароли</button>
                         </div>
+                    </form>
+                </div>
 
-                        <div class="form-group">
-                            <label for="settingOwnerPassword">Пароль Владельца (Директора):</label>
-                            <input type="text" id="settingOwnerPassword" placeholder="Пароль владельца">
-                            <small class="text-muted">Для входа в этот кабинет и кассу</small>
+                <!-- 4. КОНТАКТЫ АВТОМОЙКИ -->
+                <div class="card" style="margin-top: 1.5rem;">
+                    <h3>📍 Контактные данные вашей автомойки</h3>
+                    <p class="text-muted">Эта информация показывается клиентам во вкладке «Контакты мойки».</p>
+                    
+                    <form onsubmit="app.saveContacts(event)" style="margin-top: 1rem;">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="editContactAddress">Адрес автомойки:</label>
+                                <input type="text" id="editContactAddress" required maxlength="100">
+                            </div>
+                            <div class="form-group">
+                                <label for="editContactHours">График работы:</label>
+                                <input type="text" id="editContactHours" required maxlength="60">
+                            </div>
+                            <div class="form-group">
+                                <label for="editContactPhone">Телефон / WhatsApp:</label>
+                                <input type="tel" id="editContactPhone" required maxlength="30">
+                            </div>
+                            <div class="form-group">
+                                <label for="editContactNotes">Дополнительно (комфорт):</label>
+                                <input type="text" id="editContactNotes" maxlength="100">
+                            </div>
                         </div>
-                    </div>
-
-                    <div style="margin-top: 1rem;">
-                        <button class="btn btn-primary" onclick="app.saveSecurityPasswords()">💾 Сохранить изменения паролей</button>
-                    </div>
+                        <div style="margin-top: 1rem;">
+                            <button class="btn btn-primary" type="submit">Сохранить контакты</button>
+                        </div>
+                    </form>
                 </div>
             </section>
 
         </main>
 
-        <!-- МОДАЛЬНОЕ ОКНО: ВЫБОР РЕЖИМА И ВХОД -->
-        <div class="modal-backdrop" id="authModal">
-            <div class="modal-window auth-modal-large">
-                <h2>Выберите режим работы</h2>
-                <p class="text-muted">Выберите нужный доступ для входа:</p>
+        <!-- ===================== МОДАЛЬНЫЕ ОКНА ===================== -->
 
-                <div class="role-grid-four">
+        <!-- 1. МОДАЛЬНОЕ ОКНО: АВТОРИЗАЦИЯ -->
+        <div class="modal-backdrop" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+            <div class="modal-window auth-modal-large">
+                <h2 id="authModalTitle">Вход в систему</h2>
+                <p class="text-muted">Выберите нужный доступ для продолжения работы:</p>
+
+                <!-- Баннер блокировки при переборе паролей -->
+                <div id="authLockoutBanner" class="alert-box danger" style="display:none;" role="alert"></div>
+
+                <div class="role-grid-four" id="roleGridButtons">
                     <!-- Режим Гостя -->
-                    <button class="role-card" onclick="app.loginAsGuest()">
-                        <div class="role-icon">🚗</div>
+                    <button class="role-card" type="button" onclick="app.loginAsGuest()">
+                        <div class="role-icon" aria-hidden="true">🚗</div>
                         <div class="role-title">Клиент / Гость</div>
                         <p>Вход без пароля: статус авто и прайс</p>
                     </button>
 
                     <!-- Режим Мойщика -->
-                    <button class="role-card" onclick="app.showWorkerSelector()">
-                        <div class="role-icon">🧽</div>
+                    <button class="role-card" type="button" onclick="app.showWorkerSelector()">
+                        <div class="role-icon" aria-hidden="true">🧽</div>
                         <div class="role-title">Мойщик</div>
-                        <p>Вход по PIN-коду: мои задачи и заработок</p>
+                        <p>Вход по PIN: свои задачи и заработок</p>
                     </button>
 
                     <!-- Режим Администратора -->
-                    <button class="role-card" onclick="app.showAdminLoginForm()">
-                        <div class="role-icon">📋</div>
+                    <button class="role-card" type="button" onclick="app.showAdminLoginForm()">
+                        <div class="role-icon" aria-hidden="true">📋</div>
                         <div class="role-title">Администратор</div>
                         <p>Вход по паролю: прием авто и боксы</p>
                     </button>
 
                     <!-- Режим Владельца -->
-                    <button class="role-card" onclick="app.showOwnerLoginForm()">
-                        <div class="role-icon">👑</div>
+                    <button class="role-card" type="button" onclick="app.showOwnerLoginForm()">
+                        <div class="role-icon" aria-hidden="true">👑</div>
                         <div class="role-title">Владелец</div>
                         <p>Вход по паролю: касса, прибыль, настройки</p>
                     </button>
                 </div>
 
                 <!-- Блок входа мойщика (Выбор сотрудника + PIN) -->
-                <div id="workerSelectBlock" style="display: none; margin-top: 1.5rem; background: var(--bg-page); padding: 1.25rem; border-radius: var(--radius); border: 1px solid var(--border);">
-                    <h3 style="margin-bottom: 0.75rem;">Вход для Мойщика</h3>
-                    <div class="form-group">
-                        <label>Выберите сотрудника:</label>
-                        <select id="workerModalSelect" style="width: 100%;">
-                            <!-- Заполняется динамически -->
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin-top: 0.75rem;">
-                        <label>Введите PIN-код:</label>
-                        <input type="password" id="workerPinInput" placeholder="Введите PIN-код" autocomplete="off">
-                    </div>
-                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                        <button class="btn btn-outline" onclick="app.hideWorkerSelector()">Назад</button>
-                        <button class="btn btn-primary" onclick="app.confirmWorkerLogin()">Войти в смену</button>
-                    </div>
+                <div id="workerSelectBlock" style="display: none; margin-top: 1.5rem;" class="sub-auth-block">
+                    <h3>Вход для Мойщика</h3>
+                    <form onsubmit="app.confirmWorkerLogin(event)">
+                        <div class="form-group" style="margin-top: 0.75rem;">
+                            <label for="workerModalSelect">Выберите сотрудника:</label>
+                            <select id="workerModalSelect" style="width: 100%;">
+                                <!-- Динамически -->
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-top: 0.75rem;">
+                            <label for="workerPinInput">Введите PIN-код:</label>
+                            <input type="password" id="workerPinInput" placeholder="••••" autocomplete="current-password" inputmode="numeric" pattern="[0-9]*" maxlength="8">
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button class="btn btn-outline" type="button" onclick="app.hideWorkerSelector()">Назад</button>
+                            <button class="btn btn-primary" type="submit">Войти в смену</button>
+                        </div>
+                    </form>
                 </div>
 
-                <!-- Блок входа администратора (Пароль админа) -->
-                <div id="adminPasswordBlock" style="display: none; margin-top: 1.5rem; background: var(--bg-page); padding: 1.25rem; border-radius: var(--radius); border: 1px solid var(--border);">
-                    <h3 style="margin-bottom: 0.75rem;">Вход для Администратора</h3>
-                    <div class="form-group">
-                        <label>Введите пароль администратора:</label>
-                        <input type="password" id="adminPasswordInput" placeholder="Введите пароль" autocomplete="off">
-                    </div>
-                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                        <button class="btn btn-outline" onclick="app.hideAdminLoginForm()">Назад</button>
-                        <button class="btn btn-primary" onclick="app.submitAdminLogin()">Войти как Администратор</button>
-                    </div>
+                <!-- Блок входа администратора -->
+                <div id="adminPasswordBlock" style="display: none; margin-top: 1.5rem;" class="sub-auth-block">
+                    <h3>Вход для Администратора</h3>
+                    <form onsubmit="app.submitAdminLogin(event)">
+                        <div class="form-group" style="margin-top: 0.75rem;">
+                            <label for="adminPasswordInput">Введите пароль администратора:</label>
+                            <input type="password" id="adminPasswordInput" placeholder="••••" autocomplete="current-password">
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button class="btn btn-outline" type="button" onclick="app.hideAdminLoginForm()">Назад</button>
+                            <button class="btn btn-primary" type="submit">Войти как Администратор</button>
+                        </div>
+                    </form>
                 </div>
 
-                <!-- Блок входа владельца (Пароль владельца) -->
-                <div id="ownerPasswordBlock" style="display: none; margin-top: 1.5rem; background: var(--bg-page); padding: 1.25rem; border-radius: var(--radius); border: 1px solid var(--border);">
-                    <h3 style="margin-bottom: 0.75rem;">Вход для Владельца (Директора)</h3>
-                    <div class="form-group">
-                        <label>Введите пароль владельца:</label>
-                        <input type="password" id="ownerPasswordInput" placeholder="Введите пароль" autocomplete="off">
-                    </div>
-                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                        <button class="btn btn-outline" onclick="app.hideOwnerLoginForm()">Назад</button>
-                        <button class="btn btn-primary" onclick="app.submitOwnerLogin()">Войти как Владелец</button>
-                    </div>
+                <!-- Блок входа владельца -->
+                <div id="ownerPasswordBlock" style="display: none; margin-top: 1.5rem;" class="sub-auth-block">
+                    <h3>Вход для Владельца (Директора)</h3>
+                    <form onsubmit="app.submitOwnerLogin(event)">
+                        <div class="form-group" style="margin-top: 0.75rem;">
+                            <label for="ownerPasswordInput">Введите пароль владельца:</label>
+                            <input type="password" id="ownerPasswordInput" placeholder="••••" autocomplete="current-password">
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button class="btn btn-outline" type="button" onclick="app.hideOwnerLoginForm()">Назад</button>
+                            <button class="btn btn-primary" type="submit">Войти как Владелец</button>
+                        </div>
+                    </form>
                     <div style="margin-top: 0.75rem; text-align: center;">
-                        <a href="javascript:void(0)" onclick="app.forgotPasswordPrompt()" style="font-size: 0.8rem; color: var(--text-muted); text-decoration: underline;">
+                        <button class="btn-link" type="button" onclick="app.forgotPasswordPrompt()">
                             Забыли пароль?
-                        </a>
+                        </button>
                     </div>
                 </div>
 
                 <div style="margin-top: 1.25rem; text-align: right;">
-                    <button class="btn btn-outline btn-sm" onclick="app.closeAuthModal()">Закрыть</button>
+                    <button class="btn btn-outline btn-sm" type="button" onclick="app.closeAuthModal()">Закрыть</button>
                 </div>
             </div>
         </div>
 
-        <!-- МОДАЛЬНОЕ ОКНО: ОПЛАТА И ЗАКРЫТИЕ ЗАКАЗА -->
-        <div class="modal-backdrop" id="paymentModal">
+        <!-- 2. МОДАЛЬНОЕ ОКНО: ПЕРВОНАЧАЛЬНАЯ НАСТРОЙКА (ПРИ ПЕРВОМ ЗАПУСКЕ) -->
+        <div class="modal-backdrop" id="firstRunModal" role="dialog" aria-modal="true" aria-labelledby="firstRunTitle">
             <div class="modal-window">
-                <h2>Расчет заказа #<span id="payOrderId"></span></h2>
+                <h2 id="firstRunTitle">Первоначальная настройка</h2>
+                <p class="text-muted">Задайте пароли для защиты вашей автомойки. Пароли будут надёжно зашифрованы и сохранены только у вас.</p>
+
+                <form onsubmit="app.submitInitialSetup(event)" style="margin-top: 1rem;">
+                    <div class="form-group" style="margin-bottom: 0.75rem;">
+                        <label for="initOwnerPass">Придумайте пароль Владельца *</label>
+                        <input type="password" id="initOwnerPass" required minlength="4" placeholder="Минимум 4 символа">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0.75rem;">
+                        <label for="initAdminPass">Придумайте пароль Администратора *</label>
+                        <input type="password" id="initAdminPass" required minlength="4" placeholder="Для приема машин">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0.75rem;">
+                        <label for="initWorkerPin">PIN-код для Мойщиков *</label>
+                        <input type="password" id="initWorkerPin" required minlength="4" maxlength="8" inputmode="numeric" placeholder="4 цифры (например: 1111)">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label for="initSecretPhrase">Секретное кодовое слово (для сброса пароля) *</label>
+                        <input type="password" id="initSecretPhrase" required minlength="4" placeholder="Запомните его на случай утери пароля">
+                    </div>
+                    <button class="btn btn-primary" style="width:100%;" type="submit">🚀 Завершить настройку и начать работу</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 3. МОДАЛЬНОЕ ОКНО: ОПЛАТА И ЗАКРЫТИЕ ЗАКАЗА -->
+        <div class="modal-backdrop" id="paymentModal" role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
+            <div class="modal-window">
+                <h2 id="paymentModalTitle">Расчет заказа #<span id="payOrderId"></span></h2>
                 <p id="payOrderInfo" class="text-muted"></p>
 
                 <div class="pay-amount-box">
@@ -594,20 +703,21 @@
                         </label>
                         <label class="pay-type-option">
                             <input type="radio" name="payMethod" value="transfer">
-                            <span>📱 Kaspi / Перевод</span>
+                            <span>📱 Kaspi / QR</span>
                         </label>
                     </div>
                 </div>
 
                 <div class="modal-actions">
-                    <button class="btn btn-outline" onclick="app.closePaymentModal()">Отмена</button>
-                    <button class="btn btn-success" onclick="app.confirmPayment()">✅ Оплачено / Завершить</button>
+                    <button class="btn btn-outline" type="button" onclick="app.closePaymentModal()">Отмена</button>
+                    <button class="btn btn-success" type="button" onclick="app.confirmPayment()">✅ Оплачено / Завершить</button>
                 </div>
             </div>
         </div>
 
     </div>
 
+    <!-- Основной скрипт -->
     <script src="app.js"></script>
 </body>
 </html>
