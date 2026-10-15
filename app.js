@@ -15,6 +15,7 @@
 
 const STORAGE_KEY = 'carwash_tracker_secure_v2';
 const LEGACY_STORAGE_KEY = 'carwash_tracker_db_v1';
+const CLIENT_SESSION_KEY = 'carwash_client_session_v1';
 
 // Категории кузова и коэффициенты
 const CATEGORY_MULTIPLIERS = {
@@ -71,7 +72,9 @@ class CarWashApp {
     constructor() {
         this.currentRole = 'guest'; // 'guest', 'worker', 'admin', 'owner'
         this.currentWorkerId = null;
+        this.currentAdminId = null;
         this.activePaymentOrderId = null;
+        this.currentClient = null; // Авторизованный гость / клиент
         
         // Сессионная защита
         this.sessionToken = null;
@@ -96,6 +99,7 @@ class CarWashApp {
         const loaded = this.loadDatabase();
         if (!loaded) return;
 
+        this.loadClientSession();
         this.initDOM();
         this.initMultiTabSync();
         this.initCloudSync();
@@ -120,7 +124,7 @@ class CarWashApp {
             },
             contacts: {
                 address: 'ул. Автомобильная, 12/1',
-                hours: 'Ежедневно с 08:00 до 23:00',
+                hours: 'Круглосуточно 24/7 (без перерывов и выходных)',
                 phone: '+7 (777) 123-45-67',
                 notes: 'Комфортная зона ожидания, зерновой кофе, бесплатный Wi-Fi'
             },
@@ -128,7 +132,18 @@ class CarWashApp {
             boxes: [
                 { id: 1, name: 'Бокс 1' },
                 { id: 2, name: 'Бокс 2' },
-                { id: 3, name: 'Бокс 3' }
+                { id: 3, name: 'Бокс 3' },
+                { id: 4, name: 'Бокс 4' },
+                { id: 5, name: 'Бокс 5' },
+                { id: 6, name: 'Бокс 6' },
+                { id: 7, name: 'Бокс 7' },
+                { id: 8, name: 'Бокс 8' },
+                { id: 9, name: 'Бокс 9' },
+                { id: 10, name: 'Бокс 10' }
+            ],
+            admins: [
+                { id: 'a1', name: 'Руслан', pinHash: null, pinSalt: null },
+                { id: 'a2', name: 'Нурсултан', pinHash: null, pinSalt: null }
             ],
             workers: [
                 { id: 'w1', name: 'Азамат', percent: 30, pinHash: null, pinSalt: null },
@@ -143,7 +158,9 @@ class CarWashApp {
                 { id: 's5', name: 'Чернение резины', basePrice: 500 },
                 { id: 's6', name: 'Химчистка багажника', basePrice: 2500 }
             ],
-            orders: []
+            orders: [],
+            clients: [],
+            bookings: []
         };
     }
 
@@ -157,8 +174,32 @@ class CarWashApp {
                 if (!Array.isArray(this.db.boxes)) this.db.boxes = [];
                 if (!Array.isArray(this.db.workers)) this.db.workers = [];
                 if (!Array.isArray(this.db.services)) this.db.services = [];
+                if (!Array.isArray(this.db.clients)) this.db.clients = [];
+                if (!Array.isArray(this.db.bookings)) this.db.bookings = [];
+                if (!Array.isArray(this.db.admins) || this.db.admins.length === 0) {
+                    this.db.admins = [
+                        { id: 'a1', name: 'Руслан', pinHash: null, pinSalt: null },
+                        { id: 'a2', name: 'Нурсултан', pinHash: null, pinSalt: null }
+                    ];
+                }
                 if (!this.db.contacts) this.db.contacts = this.getInitialDefaultState().contacts;
+                if (!this.db.contacts.hours || this.db.contacts.hours.includes('08:00') || this.db.contacts.hours.includes('23:00')) {
+                    this.db.contacts.hours = 'Круглосуточно 24/7 (без перерывов и выходных)';
+                }
                 if (!this.db.cloud) this.db.cloud = { enabled: false, firebaseUrl: '' };
+
+                // Гарантируем наличие всех 10 боксов
+                if (this.db.boxes.length < 10) {
+                    const existing = this.db.boxes;
+                    const boxes = [];
+                    for (let i = 1; i <= 10; i++) {
+                        const found = existing.find(b => b.id === i);
+                        boxes.push(found || { id: i, name: `Бокс ${i}` });
+                    }
+                    this.db.boxes = boxes;
+                    this.saveDatabase();
+                }
+
                 return true;
             }
 
@@ -186,6 +227,37 @@ class CarWashApp {
             console.error('Критическая ошибка чтения базы данных:', err);
             alert('⚠️ Ошибка чтения локальной базы данных. Данные не были стёрты. Пожалуйста, откройте сайт в обычном режиме.');
             return false;
+        }
+    }
+
+    loadClientSession() {
+        try {
+            const stored = localStorage.getItem(CLIENT_SESSION_KEY);
+            if (stored) {
+                const data = JSON.parse(stored);
+                if (data && data.id) {
+                    const found = (this.db.clients || []).find(c => c.id === data.id);
+                    this.currentClient = found || data;
+                }
+            }
+        } catch (e) {
+            console.warn('Ошибка загрузки сессии клиента', e);
+        }
+    }
+
+    saveClientSession(client) {
+        this.currentClient = client;
+        if (client) {
+            try {
+                const sessionData = {
+                    id: client.id,
+                    name: client.name,
+                    phone: client.phone
+                };
+                localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(sessionData));
+            } catch (e) {}
+        } else {
+            localStorage.removeItem(CLIENT_SESSION_KEY);
         }
     }
 
@@ -265,6 +337,11 @@ class CarWashApp {
                     this.db.orders = cloudData.orders || [];
                     this.db.boxes = cloudData.boxes || this.db.boxes;
                     this.db.services = cloudData.services || this.db.services;
+                    if (Array.isArray(cloudData.workers) && cloudData.workers.length > 0) this.db.workers = cloudData.workers;
+                    if (Array.isArray(cloudData.clients)) this.db.clients = cloudData.clients;
+                    if (Array.isArray(cloudData.bookings)) this.db.bookings = cloudData.bookings;
+                    if (Array.isArray(cloudData.admins) && cloudData.admins.length > 0) this.db.admins = cloudData.admins;
+                    if (cloudData.contacts) this.db.contacts = cloudData.contacts;
                     this.db.lastCloudUpdate = cloudData.updatedAt;
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.db));
                     this.renderAll();
@@ -284,7 +361,11 @@ class CarWashApp {
                 orders: this.db.orders,
                 boxes: this.db.boxes,
                 services: this.db.services,
+                workers: this.db.workers,
                 contacts: this.db.contacts,
+                clients: this.db.clients || [],
+                bookings: this.db.bookings || [],
+                admins: (this.db.admins || []).map(a => ({ id: a.id, name: a.name })),
                 updatedAt: Date.now()
             };
             this.db.lastCloudUpdate = payload.updatedAt;
@@ -352,10 +433,19 @@ class CarWashApp {
         return true;
     }
 
-    setSession(role, workerId = null) {
+    setSession(role, entityId = null) {
         this.currentRole = role;
         this.sessionRole = role;
-        this.currentWorkerId = workerId;
+        if (role === 'worker') {
+            this.currentWorkerId = entityId;
+            this.currentAdminId = null;
+        } else if (role === 'admin') {
+            this.currentAdminId = entityId;
+            this.currentWorkerId = null;
+        } else {
+            this.currentWorkerId = null;
+            this.currentAdminId = null;
+        }
         this.sessionToken = Security.generateId();
         this.sessionExpires = Date.now() + (12 * 60 * 60 * 1000); // 12 часов
         this.failedAttempts = 0;
@@ -446,6 +536,7 @@ class CarWashApp {
         this.currentRole = 'guest';
         this.sessionRole = 'guest';
         this.currentWorkerId = null;
+        this.currentAdminId = null;
         this.applyRoleUI();
         this.closeAuthModal();
         this.renderAll();
@@ -511,6 +602,16 @@ class CarWashApp {
 
     showAdminLoginForm() {
         if (this.checkBruteForceLockout()) return;
+        const select = document.getElementById('adminModalSelect');
+        if (select) {
+            select.innerHTML = '';
+            (this.db.admins || []).forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a.id;
+                opt.textContent = a.name;
+                select.appendChild(opt);
+            });
+        }
         document.getElementById('adminPasswordBlock').style.display = 'block';
         document.getElementById('workerSelectBlock').style.display = 'none';
         document.getElementById('ownerPasswordBlock').style.display = 'none';
@@ -527,20 +628,39 @@ class CarWashApp {
         event.preventDefault();
         if (this.checkBruteForceLockout()) return;
 
+        const select = document.getElementById('adminModalSelect');
+        const selectedId = select ? select.value : null;
         const pass = document.getElementById('adminPasswordInput').value;
         if (!pass) return;
 
-        if (this.db.auth && this.db.auth.adminHash) {
-            const hash = await Security.hash(pass, this.db.auth.adminSalt);
-            if (hash === this.db.auth.adminHash) {
-                this.setSession('admin');
-                alert('Успешный вход в кабинет Администратора смены!');
-                return;
+        const admin = (this.db.admins || []).find(a => a.id === selectedId);
+        let isValid = false;
+
+        // 1. Проверяем личный PIN / пароль администратора, если он установлен
+        if (admin && admin.pinHash && admin.pinSalt) {
+            const inputHash = await Security.hash(pass, admin.pinSalt);
+            if (inputHash === admin.pinHash) {
+                isValid = true;
             }
         }
 
+        // 2. Если личный PIN не подошел или не задан, проверяем общий пароль администратора
+        if (!isValid && this.db.auth && this.db.auth.adminHash) {
+            const hash = await Security.hash(pass, this.db.auth.adminSalt);
+            if (hash === this.db.auth.adminHash) {
+                isValid = true;
+            }
+        }
+
+        if (isValid) {
+            const adminName = admin ? admin.name : 'Администратор';
+            this.setSession('admin', selectedId);
+            alert(`Успешный вход в смену! Администратор: ${adminName}`);
+            return;
+        }
+
         this.registerFailedAttempt();
-        alert('Неверный пароль администратора!');
+        alert('Неверный пароль или PIN администратора!');
     }
 
     showOwnerLoginForm() {
@@ -662,11 +782,17 @@ class CarWashApp {
         const badge = document.getElementById('currentRoleBadge');
         document.body.className = `role-${this.currentRole}`;
 
+        // Плашка профиля клиента скрыта для всех служебных ролей (Администратор, Владелец, Мойщик)
+        const clientBar = document.getElementById('clientAccountBar');
+        if (clientBar) {
+            clientBar.style.display = (this.currentRole === 'guest') ? 'flex' : 'none';
+        }
+
         if (this.currentRole === 'guest') {
             badge.textContent = '🚗 Режим: Клиент / Гость';
             badge.style.background = '#f1f5f9';
             badge.style.color = '#334155';
-            this.switchTab('guestSearch');
+            this.switchTab('guestBooking');
         } else if (this.currentRole === 'worker') {
             const worker = this.db.workers.find(w => w.id === this.currentWorkerId);
             const workerName = worker ? worker.name : 'Сотрудник';
@@ -675,7 +801,9 @@ class CarWashApp {
             badge.style.color = '#0369a1';
             this.switchTab('workerTasks');
         } else if (this.currentRole === 'admin') {
-            badge.textContent = '📋 Кабинет: Администратор смены';
+            const admin = (this.db.admins || []).find(a => a.id === this.currentAdminId);
+            const adminName = admin ? admin.name : 'Администратор';
+            badge.textContent = `📋 Администратор: ${Security.escapeHTML(adminName)}`;
             badge.style.background = '#eff6ff';
             badge.style.color = '#2563eb';
             this.switchTab('activeOrders');
@@ -694,7 +822,7 @@ class CarWashApp {
             return;
         }
 
-        if (['newOrder', 'activeOrders', 'history'].includes(tabId) && !['admin', 'owner'].includes(this.sessionRole)) {
+        if (['newOrder', 'activeOrders', 'history', 'adminBookings'].includes(tabId) && !['admin', 'owner'].includes(this.sessionRole)) {
             alert('Этот раздел доступен только Администратору или Владельцу.');
             return;
         }
@@ -707,9 +835,20 @@ class CarWashApp {
             content.classList.toggle('active', content.id === `tab-${tabId}`);
         });
 
+        if (tabId === 'guestBooking') {
+            this.populateBookingCarDropdown();
+            this.renderBookingServicesCheckboxes();
+            this.renderAvailableTimeSlots();
+            this.renderGuestBookings();
+        }
+        if (tabId === 'guestCars') this.renderClientGarage();
+        if (tabId === 'adminBookings') this.renderAdminBookings();
         if (tabId === 'finance') this.renderFinance();
         if (tabId === 'history') this.renderHistory();
-        if (tabId === 'activeOrders') this.renderActiveOrders();
+        if (tabId === 'activeOrders') {
+            this.renderActiveOrders();
+            this.renderBoxesAndSelects();
+        }
         if (tabId === 'workerTasks') this.renderWorkerTasks();
         if (tabId === 'workerHistory') this.renderWorkerHistory();
         if (tabId === 'guestSearch') this.renderGuestBoxesOverview();
@@ -717,12 +856,151 @@ class CarWashApp {
         if (tabId === 'settings') this.renderSettings();
     }
 
+    // ==================== МАСКА И ФОРМАТИРОВАНИЕ НОМЕРА ТЕЛЕФОНА ====================
+
+    formatPhoneNumber(val) {
+        if (!val) return '';
+        const raw = String(val).trim();
+        let digits = raw.replace(/\D/g, '');
+        if (!digits) {
+            return raw.includes('+') ? '+7 (' : '';
+        }
+
+        // Если введены 11 цифр, начинающихся с 7 или 8 (например 8707... или 7707...)
+        if (digits.length === 11 && (digits[0] === '7' || digits[0] === '8')) {
+            digits = digits.substring(1);
+        } else if (digits.length > 11) {
+            if (digits.startsWith('7') || digits.startsWith('8')) {
+                digits = digits.substring(1, 11);
+            } else {
+                digits = digits.substring(0, 10);
+            }
+        } else if (digits.length <= 10) {
+            // Если номер начинается с префикса +7 или 8
+            if (raw.startsWith('+7') && digits.startsWith('7')) {
+                digits = digits.substring(1);
+            } else if (raw.startsWith('8') && digits.startsWith('8')) {
+                digits = digits.substring(1);
+            }
+        }
+
+        digits = digits.substring(0, 10);
+
+        let res = '+7';
+        if (digits.length > 0) {
+            res += ' (' + digits.substring(0, 3);
+        }
+        if (digits.length >= 3) {
+            res += ') ' + digits.substring(3, 6);
+        }
+        if (digits.length >= 6) {
+            res += '-' + digits.substring(6, 8);
+        }
+        if (digits.length >= 8) {
+            res += '-' + digits.substring(8, 10);
+        }
+        return res;
+    }
+
+    initPhoneMasks() {
+        const phoneInputs = document.querySelectorAll('input[type="tel"]');
+        phoneInputs.forEach(input => {
+            // Форматируем текущее значение если уже есть
+            if (input.value && input.value.trim().length > 0 && !input.value.startsWith('+7 (')) {
+                input.value = this.formatPhoneNumber(input.value);
+            }
+
+            if (input.dataset.maskBound) return;
+            input.dataset.maskBound = 'true';
+
+            input.addEventListener('focus', () => {
+                if (!input.value || !input.value.trim()) {
+                    input.value = '+7 (';
+                }
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace') {
+                    const selStart = input.selectionStart;
+                    const selEnd = input.selectionEnd;
+                    if (selStart === selEnd) {
+                        if (selStart <= 4) {
+                            e.preventDefault();
+                            input.value = '';
+                            return;
+                        }
+                        const before = input.value.substring(0, selStart);
+                        const after = input.value.substring(selStart);
+                        const lastChar = before[before.length - 1];
+                        if (/[\s\-\)\(]/.test(lastChar)) {
+                            e.preventDefault();
+                            // Удаляем последнюю цифру перед знаком форматирования
+                            let lastDigitIndex = -1;
+                            for (let i = before.length - 1; i >= 0; i--) {
+                                if (/\d/.test(before[i]) && i >= 4) {
+                                    lastDigitIndex = i;
+                                    break;
+                                }
+                            }
+                            if (lastDigitIndex !== -1) {
+                                const newBefore = before.substring(0, lastDigitIndex) + before.substring(lastDigitIndex + 1);
+                                input.value = this.formatPhoneNumber(newBefore + after);
+                                const newPos = Math.max(4, input.value.length);
+                                try { input.setSelectionRange(newPos, newPos); } catch (_) {}
+                            } else {
+                                input.value = '';
+                            }
+                        }
+                    }
+                }
+            });
+
+            input.addEventListener('input', () => {
+                const cursor = input.selectionStart;
+                const prevLen = input.value.length;
+                const formatted = this.formatPhoneNumber(input.value);
+                input.value = formatted;
+
+                if (cursor !== null) {
+                    const diff = formatted.length - prevLen;
+                    const newPos = Math.max(4, Math.min(cursor + diff, formatted.length));
+                    try { input.setSelectionRange(newPos, newPos); } catch (_) {}
+                }
+            });
+
+            input.addEventListener('blur', () => {
+                const rawDigits = input.value.replace(/\D/g, '');
+                if (rawDigits.length <= 1) {
+                    input.value = '';
+                }
+            });
+        });
+    }
+
     initDOM() {
         const options = { day: 'numeric', month: 'long', year: 'numeric' };
-        document.getElementById('shiftDate').textContent = new Date().toLocaleDateString('ru-RU', options);
+        const shiftDateEl = document.getElementById('shiftDate');
+        if (shiftDateEl) shiftDateEl.textContent = new Date().toLocaleDateString('ru-RU', options);
+
+        const bookingDateInput = document.getElementById('bookingDate');
+        if (bookingDateInput) {
+            const todayStr = Security.getLocalDateString(new Date());
+            bookingDateInput.min = todayStr;
+            if (!bookingDateInput.value) {
+                bookingDateInput.value = todayStr;
+            }
+        }
+        this.renderAvailableTimeSlots();
+        this.initPhoneMasks();
     }
 
     renderAll() {
+        this.renderClientBar();
+        this.populateBookingCarDropdown();
+        this.renderBookingServicesCheckboxes();
+        this.renderGuestBookings();
+        this.renderClientGarage();
+        this.renderAdminBookings();
         this.renderBoxesAndSelects();
         this.renderServicesCheckboxes();
         this.renderActiveOrders();
@@ -734,6 +1012,817 @@ class CarWashApp {
         this.renderGuestBoxesOverview();
         this.renderGuestPrices();
         this.renderContactsView();
+        this.initPhoneMasks();
+    }
+
+    // ==================== ЛИЧНЫЙ КАБИНЕТ КЛИЕНТА (ГОСТЯ) ====================
+
+    openClientAuthModal() {
+        const modal = document.getElementById('clientAuthModal');
+        if (modal) modal.classList.add('open');
+        this.switchClientAuthTab('login');
+    }
+
+    closeClientAuthModal() {
+        const modal = document.getElementById('clientAuthModal');
+        if (modal) modal.classList.remove('open');
+    }
+
+    switchClientAuthTab(tab) {
+        const loginBtn = document.getElementById('tabBtnClientLogin');
+        const regBtn = document.getElementById('tabBtnClientRegister');
+        const loginForm = document.getElementById('clientLoginForm');
+        const regForm = document.getElementById('clientRegisterForm');
+
+        if (tab === 'register') {
+            if (loginBtn) loginBtn.classList.remove('active');
+            if (regBtn) regBtn.classList.add('active');
+            if (loginForm) loginForm.style.display = 'none';
+            if (regForm) regForm.style.display = 'block';
+            const regName = document.getElementById('clientRegName');
+            if (regName) regName.focus();
+        } else {
+            if (regBtn) regBtn.classList.remove('active');
+            if (loginBtn) loginBtn.classList.add('active');
+            if (regForm) regForm.style.display = 'none';
+            if (loginForm) loginForm.style.display = 'block';
+            const loginPhone = document.getElementById('clientLoginPhone');
+            if (loginPhone) loginPhone.focus();
+        }
+    }
+
+    async registerClient(event) {
+        event.preventDefault();
+        const name = document.getElementById('clientRegName').value.trim();
+        const rawPhone = document.getElementById('clientRegPhone').value.trim();
+        const pass = document.getElementById('clientRegPass').value;
+
+        if (!name || !rawPhone || !pass) {
+            alert('Пожалуйста, заполните все обязательные поля.');
+            return;
+        }
+        if (pass.length < 4) {
+            alert('Пароль должен содержать минимум 4 символа.');
+            return;
+        }
+
+        const cleanPhone = rawPhone.replace(/[^0-9+]/g, '');
+        if (cleanPhone.length < 6) {
+            alert('Пожалуйста, введите корректный номер телефона.');
+            return;
+        }
+
+        const cleanDigits = rawPhone.replace(/\D/g, '').slice(-10);
+        if (cleanDigits.length < 10) {
+            alert('Пожалуйста, введите корректный номер телефона (10 цифр номера).');
+            return;
+        }
+
+        if (!Array.isArray(this.db.clients)) this.db.clients = [];
+
+        const exists = this.db.clients.find(c => String(c.phone || '').replace(/\D/g, '').slice(-10) === cleanDigits);
+        if (exists) {
+            alert('Клиент с таким номером телефона уже зарегистрирован! Пожалуйста, войдите в аккаунт.');
+            this.switchClientAuthTab('login');
+            const phoneInput = document.getElementById('clientLoginPhone');
+            if (phoneInput) phoneInput.value = this.formatPhoneNumber(rawPhone);
+            return;
+        }
+
+        const salt = Security.generateSalt();
+        const passHash = await Security.hash(pass, salt);
+
+        const formattedPhone = this.formatPhoneNumber(rawPhone);
+
+        const newClient = {
+            id: 'c_' + Security.generateId(),
+            name,
+            phone: formattedPhone,
+            passHash,
+            salt,
+            cars: [],
+            createdAt: new Date().toISOString()
+        };
+
+        this.db.clients.push(newClient);
+        this.saveDatabase();
+        this.saveClientSession(newClient);
+        this.closeClientAuthModal();
+        this.renderAll();
+        alert(`🎉 Добро пожаловать, ${name}! Личный кабинет успешно создан.`);
+    }
+
+    async loginClient(event) {
+        event.preventDefault();
+        const rawPhone = document.getElementById('clientLoginPhone').value.trim();
+        const pass = document.getElementById('clientLoginPass').value;
+
+        if (!rawPhone || !pass) {
+            alert('Пожалуйста, введите телефон и пароль.');
+            return;
+        }
+
+        const cleanDigits = rawPhone.replace(/\D/g, '').slice(-10);
+        const client = (this.db.clients || []).find(c => String(c.phone || '').replace(/\D/g, '').slice(-10) === cleanDigits);
+
+        if (!client) {
+            alert('Аккаунт с таким номером не найден. Переключитесь на вкладку регистрации.');
+            this.switchClientAuthTab('register');
+            const regPhone = document.getElementById('clientRegPhone');
+            if (regPhone) regPhone.value = this.formatPhoneNumber(rawPhone);
+            return;
+        }
+
+        const hash = await Security.hash(pass, client.salt);
+        if (hash !== client.passHash) {
+            alert('Неверный пароль!');
+            return;
+        }
+
+        this.saveClientSession(client);
+        this.closeClientAuthModal();
+        this.renderAll();
+        alert(`✅ С возвращением, ${client.name}!`);
+    }
+
+    logoutClient() {
+        this.saveClientSession(null);
+        this.renderAll();
+        alert('Вы вышли из личного кабинета.');
+    }
+
+    renderClientBar() {
+        const clientBar = document.getElementById('clientAccountBar');
+        if (clientBar) {
+            clientBar.style.display = (this.currentRole === 'guest') ? 'flex' : 'none';
+        }
+
+        // В служебных ролях (Администратор, Владелец, Мойщик) плашка клиента не отображается
+        if (this.currentRole !== 'guest') return;
+
+        const nameEl = document.getElementById('clientBarName');
+        const statusEl = document.getElementById('clientBarStatus');
+        const actionsEl = document.getElementById('clientBarActions');
+        const bookingNameEl = document.getElementById('bookingClientName');
+        const bookingPhoneEl = document.getElementById('bookingClientPhone');
+
+        if (this.currentClient) {
+            const carCount = Array.isArray(this.currentClient.cars) ? this.currentClient.cars.length : 0;
+            if (nameEl) nameEl.textContent = `Здравствуйте, ${Security.escapeHTML(this.currentClient.name)}!`;
+            if (statusEl) statusEl.textContent = `Номер: ${Security.escapeHTML(this.currentClient.phone)} • Автомобилей в гараже: ${carCount}`;
+            if (actionsEl) {
+                actionsEl.innerHTML = `
+                    <button class="btn btn-outline btn-sm" type="button" onclick="app.switchTab('guestCars')">🚗 Гараж (${carCount})</button>
+                    <button class="btn btn-outline btn-sm" type="button" onclick="app.logoutClient()" style="margin-left:0.5rem; color:#ef4444; border-color:#fecaca;">Выйти</button>
+                `;
+            }
+            if (bookingNameEl && !bookingNameEl.value) bookingNameEl.value = this.currentClient.name;
+            if (bookingPhoneEl && !bookingPhoneEl.value) bookingPhoneEl.value = this.currentClient.phone;
+        } else {
+            if (nameEl) nameEl.textContent = 'Гостевой режим';
+            if (statusEl) statusEl.textContent = 'Войдите в личный кабинет, чтобы сохранять свои авто и управлять бронированиями';
+            if (actionsEl) {
+                actionsEl.innerHTML = `
+                    <button class="btn btn-primary btn-sm" type="button" onclick="app.openClientAuthModal()">🔑 Вход / Регистрация</button>
+                `;
+            }
+        }
+    }
+
+    // ==================== ГАРАЖ КЛИЕНТА ====================
+
+    renderClientGarage() {
+        const emptyEl = document.getElementById('clientGarageEmpty');
+        const listEl = document.getElementById('clientGarageList');
+        if (!emptyEl || !listEl) return;
+
+        if (!this.currentClient) {
+            emptyEl.style.display = 'block';
+            emptyEl.innerHTML = `
+                <div style="padding: 1.5rem 0; text-align:center;">
+                    <p>Для управления гаражом и сохранения машин войдите в аккаунт.</p>
+                    <button class="btn btn-primary" type="button" onclick="app.openClientAuthModal()" style="margin-top:0.5rem;">Войти в личный кабинет</button>
+                </div>
+            `;
+            listEl.style.display = 'none';
+            listEl.innerHTML = '';
+            return;
+        }
+
+        const cars = Array.isArray(this.currentClient.cars) ? this.currentClient.cars : [];
+        if (cars.length === 0) {
+            emptyEl.style.display = 'block';
+            emptyEl.innerHTML = 'У вас пока нет сохраненных авто. Добавьте свою первую машину в форме справа!';
+            listEl.style.display = 'none';
+            listEl.innerHTML = '';
+        } else {
+            emptyEl.style.display = 'none';
+            listEl.style.display = 'grid';
+            listEl.innerHTML = '';
+
+            const categoryNames = {
+                sedan: '1 класс — Седан / Хэтчбек',
+                crossover: '2 класс — Кроссовер / Универсал',
+                suv: '3 класс — Внедорожник / Джип',
+                minivan: '4 класс — Микроавтобус'
+            };
+
+            cars.forEach((car, idx) => {
+                const card = document.createElement('div');
+                card.className = 'garage-card';
+                card.innerHTML = `
+                    <div style="flex:1;">
+                        <span class="garage-plate-badge">${Security.escapeHTML(car.plate)}</span>
+                        <div style="font-weight:700; margin:0.25rem 0;">${Security.escapeHTML(car.model)}</div>
+                        <div style="font-size:0.8rem; color:var(--text-muted);">${categoryNames[car.category] || car.category}</div>
+                        <div style="margin-top:0.75rem; display:flex; gap:0.5rem;">
+                            <button class="btn btn-outline btn-sm" type="button" onclick="app.quickBookCar(${idx})">📅 Записаться</button>
+                            <button class="btn btn-outline btn-sm" type="button" onclick="app.removeClientCar('${Security.escapeHTML(car.plate)}')" style="color:#ef4444; border-color:#fecaca;" title="Удалить">🗑</button>
+                        </div>
+                    </div>
+                `;
+                listEl.appendChild(card);
+            });
+        }
+    }
+
+    quickBookCar(carIdx) {
+        this.switchTab('guestBooking');
+        const select = document.getElementById('bookingCarSelect');
+        if (select) {
+            select.value = `car_${carIdx}`;
+            this.onBookingCarSelected();
+        }
+    }
+
+    addClientCar(event) {
+        event.preventDefault();
+        if (!this.currentClient) {
+            alert('Чтобы добавить автомобиль в гараж, пожалуйста, войдите в личный кабинет.');
+            this.openClientAuthModal();
+            return;
+        }
+
+        const plateInput = document.getElementById('garagePlate');
+        const modelInput = document.getElementById('garageModel');
+        const catSelect = document.getElementById('garageCategory');
+
+        const plate = plateInput.value.trim().toUpperCase();
+        const model = modelInput.value.trim();
+        const category = catSelect.value;
+
+        if (!plate || !model) {
+            alert('Пожалуйста, укажите госномер и модель авто.');
+            return;
+        }
+
+        if (!Array.isArray(this.currentClient.cars)) {
+            this.currentClient.cars = [];
+        }
+
+        const cleanPlate = plate.replace(/\s+/g, '');
+        const exists = this.currentClient.cars.find(c => c.plate.replace(/\s+/g, '') === cleanPlate);
+        if (exists) {
+            alert(`Автомобиль ${plate} уже есть в вашем гараже!`);
+            return;
+        }
+
+        const newCar = { plate, model, category };
+        this.currentClient.cars.push(newCar);
+
+        const dbClient = this.db.clients.find(c => c.id === this.currentClient.id);
+        if (dbClient) {
+            dbClient.cars = this.currentClient.cars;
+        }
+
+        this.saveDatabase();
+        this.saveClientSession(this.currentClient);
+        event.target.reset();
+        this.renderAll();
+        alert(`🚗 Автомобиль ${plate} (${model}) успешно добавлен в ваш гараж!`);
+    }
+
+    removeClientCar(plate) {
+        if (!this.currentClient || !Array.isArray(this.currentClient.cars)) return;
+        if (!confirm(`Удалить автомобиль ${plate} из гаража?`)) return;
+
+        this.currentClient.cars = this.currentClient.cars.filter(c => c.plate !== plate);
+        const dbClient = this.db.clients.find(c => c.id === this.currentClient.id);
+        if (dbClient) {
+            dbClient.cars = this.currentClient.cars;
+        }
+
+        this.saveDatabase();
+        this.saveClientSession(this.currentClient);
+        this.renderAll();
+    }
+
+    populateBookingCarDropdown() {
+        const select = document.getElementById('bookingCarSelect');
+        if (!select) return;
+
+        const currentVal = select.value;
+        select.innerHTML = '';
+
+        if (this.currentClient && Array.isArray(this.currentClient.cars) && this.currentClient.cars.length > 0) {
+            this.currentClient.cars.forEach((car, idx) => {
+                const opt = document.createElement('option');
+                opt.value = `car_${idx}`;
+                opt.textContent = `🚗 ${car.plate} — ${car.model}`;
+                select.appendChild(opt);
+            });
+        }
+
+        const newOpt = document.createElement('option');
+        newOpt.value = 'new';
+        newOpt.textContent = '+ Ввести другой автомобиль...';
+        select.appendChild(newOpt);
+
+        if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
+            select.value = currentVal;
+        } else if (this.currentClient && Array.isArray(this.currentClient.cars) && this.currentClient.cars.length > 0) {
+            select.value = 'car_0';
+        } else {
+            select.value = 'new';
+        }
+
+        this.onBookingCarSelected();
+    }
+
+    onBookingCarSelected() {
+        const select = document.getElementById('bookingCarSelect');
+        if (!select) return;
+
+        const val = select.value;
+        const plateInput = document.getElementById('bookingPlate');
+        const modelInput = document.getElementById('bookingModel');
+        const catSelect = document.getElementById('bookingCategory');
+
+        if (val.startsWith('car_') && this.currentClient && Array.isArray(this.currentClient.cars)) {
+            const idx = parseInt(val.replace('car_', ''), 10);
+            const car = this.currentClient.cars[idx];
+            if (car) {
+                if (plateInput) plateInput.value = car.plate;
+                if (modelInput) modelInput.value = car.model;
+                if (catSelect) catSelect.value = car.category || 'sedan';
+            }
+        } else {
+            if (plateInput && !plateInput.matches(':focus')) plateInput.value = '';
+            if (modelInput && !modelInput.matches(':focus')) modelInput.value = '';
+            if (catSelect) catSelect.value = 'sedan';
+        }
+        this.recalculateBookingTotal();
+    }
+
+    // ==================== ОНЛАЙН-БРОНИРОВАНИЕ ВРЕМЕНИ ====================
+
+    renderBookingServicesCheckboxes() {
+        const container = document.getElementById('bookingServicesCheckboxes');
+        if (!container) return;
+        container.innerHTML = '';
+
+        this.db.services.forEach(s => {
+            const label = document.createElement('label');
+            label.className = 'service-checkbox-card';
+            label.innerHTML = `
+                <input type="checkbox" name="bookingServices" value="${s.id}" onchange="app.recalculateBookingTotal()">
+                <div>
+                    <div><strong>${Security.escapeHTML(s.name)}</strong></div>
+                    <small class="text-muted">базовая: ${Number(s.basePrice).toLocaleString()} ₸</small>
+                </div>
+            `;
+            container.appendChild(label);
+        });
+        this.recalculateBookingTotal();
+    }
+
+    recalculateBookingTotal() {
+        const categoryEl = document.getElementById('bookingCategory');
+        const category = categoryEl ? categoryEl.value : 'sedan';
+        const multiplier = CATEGORY_MULTIPLIERS[category] || 1.0;
+
+        const checked = Array.from(document.querySelectorAll('input[name="bookingServices"]:checked')).map(el => el.value);
+        let total = 0;
+        checked.forEach(sid => {
+            const service = this.db.services.find(s => s.id === sid);
+            if (service && typeof service.basePrice === 'number' && !isNaN(service.basePrice)) {
+                total += Math.round(service.basePrice * multiplier);
+            }
+        });
+
+        const displayEl = document.getElementById('bookingCalculatedPrice');
+        if (displayEl) {
+            displayEl.textContent = `${total.toLocaleString()} ₸`;
+        }
+        return total;
+    }
+
+    renderAvailableTimeSlots() {
+        const select = document.getElementById('bookingTime');
+        if (!select) return;
+        const dateInput = document.getElementById('bookingDate');
+        const selectedDate = dateInput ? dateInput.value : Security.getLocalDateString(new Date());
+
+        const currentVal = select.value;
+        select.innerHTML = '';
+
+        const now = new Date();
+        const todayStr = Security.getLocalDateString(now);
+        const isToday = (selectedDate === todayStr);
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+
+        // Круглосуточно 24/7: все 24 часа с шагом 30 минут
+        const times = [];
+        for (let h = 0; h < 24; h++) {
+            times.push(`${String(h).padStart(2, '0')}:00`);
+            times.push(`${String(h).padStart(2, '0')}:30`);
+        }
+
+        const bookingsForDate = (this.db.bookings || []).filter(b => b.date === selectedDate && b.status !== 'cancelled');
+        let defaultSlot = null;
+
+        times.forEach(t => {
+            const [th, tm] = t.split(':').map(Number);
+            const isPast = isToday && (th < currentHour || (th === currentHour && tm <= currentMinute));
+
+            const confirmedCount = bookingsForDate.filter(b => b.time === t && (b.status === 'confirmed' || b.status === 'in-progress')).length;
+            const freeBays = Math.max(0, 10 - confirmedCount);
+            const opt = document.createElement('option');
+            opt.value = t;
+
+            if (isPast) {
+                opt.textContent = `${t} (Прошедшее время)`;
+                opt.disabled = true;
+            } else {
+                if (!defaultSlot) defaultSlot = t;
+                if (freeBays > 0) {
+                    opt.textContent = `${t} (Свободно ~${freeBays} из 10 боксов)`;
+                } else {
+                    opt.textContent = `${t} (Все 10 боксов заняты — лист ожидания)`;
+                }
+            }
+            select.appendChild(opt);
+        });
+
+        if (currentVal && times.includes(currentVal)) {
+            const chosenOpt = select.querySelector(`option[value="${currentVal}"]`);
+            if (chosenOpt && !chosenOpt.disabled) {
+                select.value = currentVal;
+            } else if (defaultSlot) {
+                select.value = defaultSlot;
+            }
+        } else if (defaultSlot) {
+            select.value = defaultSlot;
+        }
+    }
+
+    createBooking(event) {
+        event.preventDefault();
+
+        const plateInput = document.getElementById('bookingPlate');
+        const modelInput = document.getElementById('bookingModel');
+        const catSelect = document.getElementById('bookingCategory');
+        const dateInput = document.getElementById('bookingDate');
+        const timeSelect = document.getElementById('bookingTime');
+        const nameInput = document.getElementById('bookingClientName');
+        const phoneInput = document.getElementById('bookingClientPhone');
+
+        const carPlate = plateInput.value.trim().toUpperCase();
+        const carModel = modelInput.value.trim();
+        const category = catSelect.value;
+        const date = dateInput.value;
+        const time = timeSelect.value;
+        const clientName = nameInput.value.trim();
+        const clientPhone = phoneInput.value.trim();
+
+        if (!carPlate || !date || !time || !clientName || !clientPhone) {
+            alert('Пожалуйста, заполните все обязательные поля!');
+            return;
+        }
+
+        const selectedServices = Array.from(document.querySelectorAll('input[name="bookingServices"]:checked')).map(el => el.value);
+        if (selectedServices.length === 0) {
+            alert('Пожалуйста, выберите хотя бы одну услугу для мойки!');
+            return;
+        }
+
+        const totalPrice = this.recalculateBookingTotal();
+        const formattedPhone = this.formatPhoneNumber(clientPhone);
+
+        const newBooking = {
+            id: 'b_' + Security.generateId(),
+            clientId: this.currentClient ? this.currentClient.id : null,
+            clientName,
+            clientPhone: formattedPhone,
+            carPlate,
+            carModel,
+            category,
+            date,
+            time,
+            services: selectedServices,
+            totalPrice,
+            status: 'pending', // pending, waiting, confirmed, in-progress, completed, cancelled
+            assignedBoxId: null,
+            orderId: null,
+            createdAt: new Date().toISOString()
+        };
+
+        if (!Array.isArray(this.db.bookings)) {
+            this.db.bookings = [];
+        }
+
+        this.db.bookings.unshift(newBooking);
+        this.saveDatabase();
+
+        if (!this.currentClient) {
+            try {
+                localStorage.setItem('carwash_guest_last_phone', formattedPhone);
+            } catch (e) {}
+        }
+
+        document.querySelectorAll('input[name="bookingServices"]').forEach(cb => cb.checked = false);
+        this.recalculateBookingTotal();
+
+        this.renderAll();
+        alert(`🎉 Заявка на бронирование принята!\n\nАвтомобиль: ${carPlate}\nДата и время: ${date} в ${time}\nСумма: ${totalPrice.toLocaleString()} ₸\nСтатус: ⏳ Ожидает подтверждения администратором.`);
+    }
+
+    renderGuestBookings() {
+        const container = document.getElementById('guestBookingsList');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const bookings = Array.isArray(this.db.bookings) ? this.db.bookings : [];
+        const clientPhone = this.currentClient ? this.currentClient.phone : (localStorage.getItem('carwash_guest_last_phone') || '');
+
+        const myBookings = bookings.filter(b => {
+            if (this.currentClient && b.clientId === this.currentClient.id) return true;
+            if (clientPhone && b.clientPhone.replace(/[^0-9]/g, '') === clientPhone.replace(/[^0-9]/g, '')) return true;
+            return false;
+        });
+
+        if (myBookings.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                    <p>У вас пока нет активных заявок на бронь.</p>
+                    <small>Заполните форму слева, чтобы забронировать бокс на удобное время.</small>
+                </div>
+            `;
+            return;
+        }
+
+        const statusMap = {
+            pending: { label: '⏳ На рассмотрении администратором', class: 'status-pill pending' },
+            waiting: { label: '⏱ В листе ожидания', class: 'status-pill waiting' },
+            confirmed: { label: '✅ Подтверждено администратором', class: 'status-pill confirmed' },
+            'in-progress': { label: '🚿 Автомобиль моется в боксе', class: 'status-pill in-progress' },
+            completed: { label: '🎉 Мойка завершена и оплачена', class: 'status-pill ready' },
+            cancelled: { label: '❌ Заявка отклонена / отменена', class: 'status-pill' }
+        };
+
+        myBookings.forEach(b => {
+            const statusInfo = statusMap[b.status] || { label: b.status, class: 'status-pill' };
+            const serviceNames = (b.services || []).map(sid => {
+                const s = this.db.services.find(srv => srv.id === sid);
+                return s ? Security.escapeHTML(s.name) : '';
+            }).filter(Boolean).join(', ');
+
+            const box = b.assignedBoxId ? this.db.boxes.find(bx => bx.id === b.assignedBoxId) : null;
+            const boxLabel = box ? ` | ${Security.escapeHTML(box.name)}` : '';
+
+            const card = document.createElement('div');
+            card.className = `booking-card ${b.status}`;
+            card.innerHTML = `
+                <div class="booking-card-header">
+                    <div>
+                        <span class="garage-plate-badge">${Security.escapeHTML(b.carPlate)}</span>
+                        <div style="font-weight:600; margin-top:0.2rem;">${Security.escapeHTML(b.carModel || 'Автомобиль')}</div>
+                    </div>
+                    <span class="${statusInfo.class}">${statusInfo.label}</span>
+                </div>
+                <div style="font-size:0.95rem; margin:0.5rem 0;">
+                    <div>📅 <strong>${b.date} в ${b.time}</strong>${boxLabel}</div>
+                    <div class="text-muted" style="margin-top:0.25rem;">Услуги: ${serviceNames || '—'}</div>
+                    <div style="margin-top:0.25rem;">Сумма: <strong style="color:var(--primary);">${Number(b.totalPrice).toLocaleString()} ₸</strong></div>
+                </div>
+                ${b.status === 'confirmed' ? `
+                    <div class="alert-box success" style="margin-top:0.5rem; font-size:0.85rem; padding:0.5rem;">
+                        Бокс забронирован! Приезжайте к назначенному времени в <strong>${box ? Security.escapeHTML(box.name) : 'бокс'}</strong>.
+                    </div>
+                ` : ''}
+                ${b.status === 'waiting' ? `
+                    <div class="alert-box warning" style="margin-top:0.5rem; font-size:0.85rem; padding:0.5rem;">
+                        Вы в листе ожидания. Администратор освободит один из 10 боксов и подтвердит время.
+                    </div>
+                ` : ''}
+                ${b.status === 'pending' || b.status === 'waiting' ? `
+                    <div style="margin-top:0.5rem; text-align:right;">
+                        <button class="btn btn-outline btn-sm" type="button" onclick="app.cancelGuestBooking('${b.id}')" style="color:#ef4444; border-color:#fecaca;">Отменить запись</button>
+                    </div>
+                ` : ''}
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    cancelGuestBooking(bookingId) {
+        const booking = (this.db.bookings || []).find(b => b.id === bookingId);
+        if (!booking) return;
+        if (!confirm('Вы уверены, что хотите отменить эту заявку на бронирование?')) return;
+
+        booking.status = 'cancelled';
+        this.saveDatabase();
+        this.renderAll();
+    }
+
+    // ==================== УПРАВЛЕНИЕ БРОНЯМИ (АДМИНИСТРАТОР) ====================
+
+    renderAdminBookings() {
+        const container = document.getElementById('adminBookingsContainer');
+        const badge = document.getElementById('pendingBookingsCount');
+        if (!container) return;
+
+        const allBookings = Array.isArray(this.db.bookings) ? this.db.bookings : [];
+        const pendingCount = allBookings.filter(b => b.status === 'pending').length;
+        if (badge) badge.textContent = pendingCount;
+
+        const filterEl = document.getElementById('adminBookingStatusFilter');
+        const filter = filterEl ? filterEl.value : 'pending';
+
+        let filtered = allBookings;
+        if (filter === 'pending') {
+            filtered = allBookings.filter(b => b.status === 'pending');
+        } else if (filter === 'waiting') {
+            filtered = allBookings.filter(b => b.status === 'waiting');
+        } else if (filter === 'confirmed') {
+            filtered = allBookings.filter(b => b.status === 'confirmed');
+        }
+
+        container.innerHTML = '';
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div class="card" style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">
+                    <h3>Нет заявок в этом разделе</h3>
+                    <p>Все входящие онлайн-бронирования клиентов обработаны.</p>
+                </div>
+            `;
+            return;
+        }
+
+        filtered.forEach(b => {
+            const serviceNames = (b.services || []).map(sid => {
+                const s = this.db.services.find(srv => srv.id === sid);
+                return s ? Security.escapeHTML(s.name) : '';
+            }).filter(Boolean).join(', ');
+
+            const card = document.createElement('div');
+            card.className = `admin-booking-card ${b.status}`;
+
+            let boxOptions = '';
+            this.db.boxes.forEach(bx => {
+                const isBusy = this.db.orders.some(o => o.boxId === bx.id && (o.status === 'in-progress' || o.status === 'ready'));
+                const isSelected = b.assignedBoxId === bx.id;
+                boxOptions += `<option value="${bx.id}" ${isSelected ? 'selected' : ''}>${Security.escapeHTML(bx.name)} ${isBusy ? '(Занят сейчас)' : '(Свободен)'}</option>`;
+            });
+
+            const statusLabels = {
+                pending: '⏳ Ожидает решения',
+                waiting: '⏱ В листе ожидания',
+                confirmed: '✅ Подтверждена',
+                'in-progress': '🚿 В боксе',
+                completed: '🎉 Завершена',
+                cancelled: '❌ Отменена'
+            };
+
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                        <span class="garage-plate-badge">${Security.escapeHTML(b.carPlate)}</span>
+                        <h3 style="margin:0.25rem 0;">${Security.escapeHTML(b.carModel || 'Автомобиль')}</h3>
+                        <div class="text-muted" style="font-size:0.9rem;">Клиент: <strong>${Security.escapeHTML(b.clientName)}</strong> (📞 <a href="tel:${Security.escapeHTML(b.clientPhone)}">${Security.escapeHTML(b.clientPhone)}</a>)</div>
+                    </div>
+                    <span class="status-pill ${b.status}">${statusLabels[b.status] || b.status}</span>
+                </div>
+
+                <div style="margin: 0.75rem 0; padding: 0.5rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 0.95rem;">
+                    <div>📅 Желаемое время: <strong style="font-size:1.05rem; color:var(--primary);">${b.date} в ${b.time}</strong></div>
+                    <div style="margin-top:0.25rem;">Услуги: <strong>${serviceNames || '—'}</strong></div>
+                    <div style="margin-top:0.25rem;">Сумма заказа: <strong>${Number(b.totalPrice).toLocaleString()} ₸</strong></div>
+                </div>
+
+                <div class="booking-actions-box">
+                    <label style="font-size:0.85rem; font-weight:600; display:block;">Назначить бокс (из 10 боксов):</label>
+                    <select id="assignBox_${b.id}">
+                        ${boxOptions}
+                    </select>
+
+                    <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.5rem;">
+                        ${b.status !== 'confirmed' ? `
+                            <button class="btn btn-success btn-sm" type="button" onclick="app.confirmAdminBooking('${b.id}')">
+                                ✅ Принять и назначить бокс
+                            </button>
+                        ` : `
+                            <button class="btn btn-primary btn-sm" type="button" onclick="app.startBookingInBay('${b.id}')">
+                                🚿 Запустить авто в бокс
+                            </button>
+                        `}
+                        ${b.status !== 'waiting' ? `
+                            <button class="btn btn-warning btn-sm" type="button" onclick="app.waitlistAdminBooking('${b.id}')">
+                                ⏱ В лист ожидания
+                            </button>
+                        ` : ''}
+                        <button class="btn btn-outline btn-sm" type="button" onclick="app.cancelAdminBooking('${b.id}')" style="color:#ef4444; border-color:#fecaca;">
+                            ❌ Отклонить
+                        </button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    confirmAdminBooking(bookingId) {
+        if (!this.verifyAuth('admin')) return;
+        const booking = (this.db.bookings || []).find(b => b.id === bookingId);
+        if (!booking) return;
+
+        const boxSelect = document.getElementById(`assignBox_${bookingId}`);
+        const boxId = boxSelect ? parseInt(boxSelect.value, 10) : 1;
+
+        booking.assignedBoxId = boxId;
+        booking.status = 'confirmed';
+        this.saveDatabase();
+        this.renderAll();
+
+        const box = this.db.boxes.find(b => b.id === boxId);
+        alert(`✅ Бронь для авто ${booking.carPlate} подтверждена! Назначен ${box ? box.name : 'Бокс ' + boxId}.`);
+    }
+
+    waitlistAdminBooking(bookingId) {
+        if (!this.verifyAuth('admin')) return;
+        const booking = (this.db.bookings || []).find(b => b.id === bookingId);
+        if (!booking) return;
+
+        booking.status = 'waiting';
+        this.saveDatabase();
+        this.renderAll();
+        alert(`⏱ Заявка авто ${booking.carPlate} переведена в лист ожидания.`);
+    }
+
+    cancelAdminBooking(bookingId) {
+        if (!this.verifyAuth('admin')) return;
+        const booking = (this.db.bookings || []).find(b => b.id === bookingId);
+        if (!booking) return;
+
+        if (!confirm(`Отклонить бронь авто ${booking.carPlate}?`)) return;
+
+        booking.status = 'cancelled';
+        this.saveDatabase();
+        this.renderAll();
+    }
+
+    startBookingInBay(bookingId) {
+        if (!this.verifyAuth('admin')) return;
+        const booking = (this.db.bookings || []).find(b => b.id === bookingId);
+        if (!booking) return;
+
+        const boxSelect = document.getElementById(`assignBox_${bookingId}`);
+        const boxId = boxSelect ? parseInt(boxSelect.value, 10) : (booking.assignedBoxId || 1);
+
+        const worker = this.db.workers[0];
+        const workerId = worker ? worker.id : null;
+        const workerPercent = worker ? worker.percent : 30;
+
+        const newOrder = {
+            id: Security.generateId(),
+            carPlate: booking.carPlate,
+            carModel: booking.carModel,
+            category: booking.category || 'sedan',
+            boxId,
+            workerId,
+            workerPercentSnapshot: workerPercent,
+            workerNameSnapshot: worker ? worker.name : '',
+            workerSalaryEarned: Math.round(booking.totalPrice * (workerPercent / 100)),
+            phone: booking.clientPhone,
+            services: booking.services || [],
+            totalPrice: booking.totalPrice,
+            status: 'in-progress',
+            paymentMethod: null,
+            createdAt: new Date().toISOString(),
+            paidAt: null
+        };
+
+        this.db.orders.unshift(newOrder);
+        booking.status = 'in-progress';
+        booking.orderId = newOrder.id;
+        booking.assignedBoxId = boxId;
+
+        this.saveDatabase();
+        this.renderAll();
+        this.switchTab('activeOrders');
+        alert(`🚿 Автомобиль ${booking.carPlate} запущен в работу в ${this.db.boxes.find(b => b.id === boxId)?.name || 'бокс'}!`);
     }
 
     // ==================== ЛОГИКА ГОСТЯ (КЛИЕНТА) ====================
@@ -865,7 +1954,7 @@ class CarWashApp {
         const elNotes = document.getElementById('viewContactNotes');
 
         if (elAddr) elAddr.textContent = c.address || 'ул. Автомобильная, 12/1';
-        if (elHours) elHours.textContent = c.hours || 'Ежедневно с 08:00 до 23:00';
+        if (elHours) elHours.textContent = c.hours || 'Круглосуточно 24/7 (без перерывов и выходных)';
         if (elPhone) elPhone.textContent = c.phone || '+7 (777) 123-45-67';
         if (elNotes) elNotes.textContent = c.notes || 'Зона отдыха, кофе, Wi-Fi';
 
@@ -876,7 +1965,7 @@ class CarWashApp {
         const edNotes = document.getElementById('editContactNotes');
 
         if (edAddr && !edAddr.value) edAddr.value = c.address || '';
-        if (edHours && !edHours.value) edHours.value = c.hours || '';
+        if (edHours && !edHours.value) edHours.value = c.hours || 'Круглосуточно 24/7 (без перерывов и выходных)';
         if (edPhone && !edPhone.value) edPhone.value = c.phone || '';
         if (edNotes && !edNotes.value) edNotes.value = c.notes || '';
     }
@@ -888,7 +1977,7 @@ class CarWashApp {
         this.db.contacts = {
             address: document.getElementById('editContactAddress').value.trim(),
             hours: document.getElementById('editContactHours').value.trim(),
-            phone: document.getElementById('editContactPhone').value.trim(),
+            phone: this.formatPhoneNumber(document.getElementById('editContactPhone').value.trim()),
             notes: document.getElementById('editContactNotes').value.trim()
         };
         this.saveDatabase();
@@ -1191,7 +2280,7 @@ class CarWashApp {
             workerPercentSnapshot: workerPercent, // Фиксация ставки на момент заказа
             workerNameSnapshot: worker ? worker.name : '',
             workerSalaryEarned: Math.round(totalPrice * (workerPercent / 100)), // Фиксация начисленной зарплаты
-            phone,
+            phone: phone ? this.formatPhoneNumber(phone) : '',
             services: selectedServices,
             totalPrice,
             status: 'in-progress',
@@ -1319,6 +2408,14 @@ class CarWashApp {
             // Гарантируем расчет и фиксацию зарплаты мойщика в заказе
             const percent = order.workerPercentSnapshot || 30;
             order.workerSalaryEarned = Math.round(order.totalPrice * (percent / 100));
+
+            // Завершаем связанную онлайн-бронь, если есть
+            if (Array.isArray(this.db.bookings)) {
+                const linkedBooking = this.db.bookings.find(b => b.orderId === order.id);
+                if (linkedBooking) {
+                    linkedBooking.status = 'completed';
+                }
+            }
 
             this.saveDatabase();
             this.closePaymentModal();
@@ -1460,6 +2557,20 @@ class CarWashApp {
     }
 
     renderSettings() {
+        // Список администраторов смены
+        const aList = document.getElementById('adminsList');
+        if (aList) {
+            aList.innerHTML = '';
+            (this.db.admins || []).forEach(a => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span><strong>${Security.escapeHTML(a.name)}</strong> ${a.pinHash ? '🔑 личный PIN' : '🔑 общий пароль'}</span>
+                    <button class="btn btn-outline btn-sm" type="button" onclick="app.removeAdmin('${a.id}')" style="color:red;">Удалить</button>
+                `;
+                aList.appendChild(li);
+            });
+        }
+
         const wList = document.getElementById('workersList');
         if (!wList) return;
         wList.innerHTML = '';
@@ -1489,6 +2600,68 @@ class CarWashApp {
         if (fbInput && this.db.cloud) {
             fbInput.value = this.db.cloud.firebaseUrl || '';
         }
+    }
+
+    async addAdmin(e) {
+        e.preventDefault();
+        if (!this.verifyAuth('owner')) return;
+
+        const name = document.getElementById('newAdminName').value.trim();
+        const pin = document.getElementById('newAdminPin').value.trim();
+
+        if (!name) {
+            alert('Пожалуйста, введите имя администратора!');
+            return;
+        }
+
+        let pinHash = null;
+        let pinSalt = null;
+        if (pin) {
+            if (pin.length < 4) {
+                alert('Личный PIN-код или пароль администратора должен быть не менее 4 символов!');
+                return;
+            }
+            pinSalt = Security.generateSalt();
+            pinHash = await Security.hash(pin, pinSalt);
+        }
+
+        if (!Array.isArray(this.db.admins)) {
+            this.db.admins = [];
+        }
+
+        this.db.admins.push({
+            id: 'a_' + Security.generateId(),
+            name,
+            pinHash,
+            pinSalt
+        });
+
+        this.saveDatabase();
+        e.target.reset();
+        this.renderAll();
+        alert(`Администратор ${name} успешно добавлен!`);
+    }
+
+    removeAdmin(id) {
+        if (!this.verifyAuth('owner')) return;
+        if (!Array.isArray(this.db.admins) || this.db.admins.length <= 1) {
+            alert('В системе должен оставаться хотя бы один администратор!');
+            return;
+        }
+        const admin = this.db.admins.find(a => a.id === id);
+        if (!confirm(`Удалить администратора ${admin ? admin.name : ''}?`)) return;
+
+        this.db.admins = this.db.admins.filter(a => a.id !== id);
+        if (this.currentAdminId === id) {
+            this.currentAdminId = null;
+        }
+        this.saveDatabase();
+        this.renderAll();
+    }
+
+    getAdminName(id) {
+        const a = (this.db.admins || []).find(item => item.id === id);
+        return a ? a.name : 'Администратор';
     }
 
     async addWorker(e) {
@@ -1602,11 +2775,25 @@ class CarWashApp {
             contacts: this.db.contacts,
             boxes: this.db.boxes,
             services: this.db.services,
+            admins: (this.db.admins || []).map(a => ({ id: a.id, name: a.name })), // Без личных хэшей PIN
             workers: this.db.workers.map(w => ({ id: w.id, name: w.name, percent: w.percent })), // Без хэшей PIN
             orders: this.db.orders.map(o => {
                 const clone = { ...o };
                 if (maskPhones && clone.phone) {
                     clone.phone = clone.phone.replace(/(\+?\d{1,3}).*(\d{2})$/, '$1 *** *** $2');
+                }
+                return clone;
+            }),
+            clients: (this.db.clients || []).map(c => ({
+                id: c.id,
+                name: c.name,
+                phone: maskPhones ? c.phone.replace(/(\+?\d{1,3}).*(\d{2})$/, '$1 *** *** $2') : c.phone,
+                cars: c.cars || []
+            })),
+            bookings: (this.db.bookings || []).map(b => {
+                const clone = { ...b };
+                if (maskPhones && clone.clientPhone) {
+                    clone.clientPhone = clone.clientPhone.replace(/(\+?\d{1,3}).*(\d{2})$/, '$1 *** *** $2');
                 }
                 return clone;
             })
@@ -1639,13 +2826,17 @@ class CarWashApp {
                 }
 
                 const ordersCount = Array.isArray(parsed.orders) ? parsed.orders.length : 0;
+                const adminsCount = Array.isArray(parsed.admins) ? parsed.admins.length : 0;
                 const workersCount = Array.isArray(parsed.workers) ? parsed.workers.length : 0;
+                const bookingsCount = Array.isArray(parsed.bookings) ? parsed.bookings.length : 0;
 
                 const confirmed = confirm(
                     `Внимание! Вы восстанавливаете базу из файла.\n\n` +
                     `• Заказов: ${ordersCount}\n` +
+                    (adminsCount > 0 ? `• Администраторов: ${adminsCount}\n` : '') +
                     `• Сотрудников: ${workersCount}\n` +
-                    `• Услуг: ${parsed.services.length}\n\n` +
+                    `• Услуг: ${parsed.services.length}\n` +
+                    `• Онлайн-броней: ${bookingsCount}\n\n` +
                     `Текущие заказы будут заменены данными из файла. Ваши пароли НЕ будут затронуты. Продолжить?`
                 );
 
@@ -1656,6 +2847,14 @@ class CarWashApp {
 
                 this.db.boxes = parsed.boxes;
                 this.db.services = parsed.services;
+                if (Array.isArray(parsed.admins) && parsed.admins.length > 0) {
+                    this.db.admins = parsed.admins.map(a => ({
+                        id: a.id || Security.generateId(),
+                        name: a.name || 'Администратор',
+                        pinHash: null,
+                        pinSalt: null
+                    }));
+                }
                 if (Array.isArray(parsed.workers)) {
                     this.db.workers = parsed.workers.map(w => ({
                         id: w.id || Security.generateId(),
@@ -1664,6 +2863,8 @@ class CarWashApp {
                     }));
                 }
                 this.db.orders = Array.isArray(parsed.orders) ? parsed.orders : [];
+                if (Array.isArray(parsed.clients)) this.db.clients = parsed.clients;
+                if (Array.isArray(parsed.bookings)) this.db.bookings = parsed.bookings;
                 if (parsed.contacts) this.db.contacts = parsed.contacts;
 
                 this.saveDatabase();
