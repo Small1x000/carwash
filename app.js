@@ -1,6 +1,10 @@
 /**
  * CarWash Tracker - Управление автомойкой (SPA)
- * Работает прямо в браузере, без внешних серверов, сохраняет все данные в localStorage
+ * Роли:
+ * 1. Гость (Клиент) - проверка статуса своего авто по номеру, прайс-лист, контакты
+ * 2. Мойщик - видит только свои назначенные машины, отмечает готовность, видит свой заработок (БЕЗ права добавления авто)
+ * 3. Администратор - оформляет заезд авто, распределяет по боксам, принимает оплату
+ * 4. Владелец - полный доступ: касса, чистая прибыль, зарплатный фонд, прайс, персонал
  */
 
 const STORAGE_KEY = 'carwash_tracker_db_v1';
@@ -70,15 +74,16 @@ const DEFAULT_STATE = {
 
 class CarWashApp {
     constructor() {
-        this.currentRole = 'worker'; // 'worker' или 'owner'
+        this.currentRole = 'guest'; // 'guest', 'worker', 'admin', 'owner'
+        this.currentWorkerId = null;
         this.activePaymentOrderId = null;
+        
         this.loadDatabase();
         this.initDOM();
         this.applyRoleUI();
         this.renderAll();
     }
 
-    // Загрузка данных из локального хранилища
     loadDatabase() {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -99,48 +104,101 @@ class CarWashApp {
     }
 
     initDOM() {
-        // Текущая дата смены
         const options = { day: 'numeric', month: 'long', year: 'numeric' };
         document.getElementById('shiftDate').textContent = new Date().toLocaleDateString('ru-RU', options);
     }
 
-    // Ролевая модель и UI
+    // ==================== РОЛИ И ДОСТУП ====================
+
     applyRoleUI() {
         const badge = document.getElementById('currentRoleBadge');
-        if (this.currentRole === 'owner') {
-            document.body.classList.remove('role-worker');
-            document.body.classList.add('role-owner');
-            badge.textContent = '👑 Кабинет: Владелец';
-            badge.style.background = '#fef3c7';
-            badge.style.color = '#b45309';
-        } else {
-            document.body.classList.remove('role-owner');
-            document.body.classList.add('role-worker');
-            badge.textContent = '🧽 Кабинет: Администратор / Рабочий';
+        document.body.className = `role-${this.currentRole}`;
+
+        if (this.currentRole === 'guest') {
+            badge.textContent = '🚗 Режим: Клиент / Гость';
+            badge.style.background = '#f1f5f9';
+            badge.style.color = '#334155';
+            this.switchTab('guestSearch');
+        } else if (this.currentRole === 'worker') {
+            const worker = this.db.workers.find(w => w.id === this.currentWorkerId);
+            const workerName = worker ? worker.name : 'Сотрудник';
+            badge.textContent = `🧽 Мойщик: ${workerName}`;
+            badge.style.background = '#e0f2fe';
+            badge.style.color = '#0369a1';
+            this.switchTab('workerTasks');
+        } else if (this.currentRole === 'admin') {
+            badge.textContent = '📋 Кабинет: Администратор смены';
             badge.style.background = '#eff6ff';
             badge.style.color = '#2563eb';
+            this.switchTab('activeOrders');
+        } else if (this.currentRole === 'owner') {
+            badge.textContent = '👑 Кабинет: Владелец (Директор)';
+            badge.style.background = '#fef3c7';
+            badge.style.color = '#b45309';
+            this.switchTab('activeOrders');
         }
     }
 
     openAuthModal() {
         document.getElementById('authModal').classList.add('open');
         this.hideOwnerLoginForm();
+        this.hideWorkerSelector();
     }
 
     closeAuthModal() {
         document.getElementById('authModal').classList.remove('open');
     }
 
-    loginAsWorker() {
-        this.currentRole = 'worker';
+    loginAsGuest() {
+        this.currentRole = 'guest';
+        this.currentWorkerId = null;
         this.applyRoleUI();
         this.closeAuthModal();
-        this.switchTab('activeOrders');
-        alert('Вы переключились в рабочий кабинет смены.');
+        this.renderAll();
+    }
+
+    showWorkerSelector() {
+        const select = document.getElementById('workerModalSelect');
+        select.innerHTML = '';
+        this.db.workers.forEach(w => {
+            const opt = document.createElement('option');
+            opt.value = w.id;
+            opt.textContent = `${w.name} (${w.percent}% от мойки)`;
+            select.appendChild(opt);
+        });
+
+        document.getElementById('workerSelectBlock').style.display = 'block';
+        document.getElementById('ownerPasswordBlock').style.display = 'none';
+    }
+
+    hideWorkerSelector() {
+        document.getElementById('workerSelectBlock').style.display = 'none';
+    }
+
+    confirmWorkerLogin() {
+        const selectedId = document.getElementById('workerModalSelect').value;
+        if (!selectedId) {
+            alert('Пожалуйста, выберите сотрудника!');
+            return;
+        }
+        this.currentRole = 'worker';
+        this.currentWorkerId = selectedId;
+        this.applyRoleUI();
+        this.closeAuthModal();
+        this.renderAll();
+    }
+
+    loginAsAdmin() {
+        this.currentRole = 'admin';
+        this.currentWorkerId = null;
+        this.applyRoleUI();
+        this.closeAuthModal();
+        this.renderAll();
     }
 
     showOwnerLoginForm() {
         document.getElementById('ownerPasswordBlock').style.display = 'block';
+        document.getElementById('workerSelectBlock').style.display = 'none';
         document.getElementById('ownerPasswordInput').focus();
     }
 
@@ -151,11 +209,12 @@ class CarWashApp {
 
     submitOwnerLogin() {
         const inputPass = document.getElementById('ownerPasswordInput').value;
-        // Проверка пароля владельца или аварийного мастер-кода
         if (inputPass === this.db.ownerPassword || inputPass === '9999') {
             this.currentRole = 'owner';
+            this.currentWorkerId = null;
             this.applyRoleUI();
             this.closeAuthModal();
+            this.renderAll();
             alert('Успешный вход в кабинет Владельца!');
         } else {
             alert('Неверный пароль владельца! Если забыли пароль, нажмите «Забыли пароль?» ниже.');
@@ -186,11 +245,18 @@ class CarWashApp {
         alert('Пароль владельца успешно изменен!');
     }
 
-    // Навигация по вкладкам
+    // ==================== НАВИГАЦИЯ ПО ВКЛАДКАМ ====================
+
     switchTab(tabId) {
+        // Проверка прав
         if (['finance', 'settings'].includes(tabId) && this.currentRole !== 'owner') {
             this.openAuthModal();
             this.showOwnerLoginForm();
+            return;
+        }
+
+        if (['newOrder', 'activeOrders', 'history'].includes(tabId) && !['admin', 'owner'].includes(this.currentRole)) {
+            alert('Этот раздел доступен только Администратору или Владельцу.');
             return;
         }
 
@@ -205,9 +271,12 @@ class CarWashApp {
         if (tabId === 'finance') this.renderFinance();
         if (tabId === 'history') this.renderHistory();
         if (tabId === 'activeOrders') this.renderActiveOrders();
+        if (tabId === 'workerTasks') this.renderWorkerTasks();
+        if (tabId === 'workerHistory') this.renderWorkerHistory();
+        if (tabId === 'guestSearch') this.renderGuestBoxesOverview();
+        if (tabId === 'guestPrices') this.renderGuestPrices();
     }
 
-    // Рендер всех частей
     renderAll() {
         this.renderBoxesAndSelects();
         this.renderServicesCheckboxes();
@@ -215,20 +284,270 @@ class CarWashApp {
         this.renderHistory();
         this.renderFinance();
         this.renderSettings();
+        this.renderWorkerTasks();
+        this.renderWorkerHistory();
+        this.renderGuestBoxesOverview();
+        this.renderGuestPrices();
     }
 
+    // ==================== ЛОГИКА ГОСТЯ (КЛИЕНТА) ====================
+
+    searchCarStatus(event) {
+        event.preventDefault();
+        const input = document.getElementById('guestSearchPlate').value.trim().toUpperCase().replace(/\s+/g, '');
+        const resultContainer = document.getElementById('guestSearchResult');
+
+        if (!input) return;
+
+        // Поиск машины в активных заказах
+        const order = this.db.orders.find(o => o.carPlate.toUpperCase().replace(/\s+/g, '') === input);
+
+        resultContainer.style.display = 'block';
+
+        if (!order) {
+            resultContainer.innerHTML = `
+                <div style="color: #64748b; text-align: center; padding: 1rem;">
+                    <h3>Автомобиль не найден</h3>
+                    <p>Авто с госномером <strong>${document.getElementById('guestSearchPlate').value.toUpperCase()}</strong> сейчас нет в очереди.</p>
+                    <small>Если вы только что заехали, администратор оформит заезд через минуту.</small>
+                </div>
+            `;
+            return;
+        }
+
+        const box = this.db.boxes.find(b => b.id === order.boxId);
+        const serviceNames = order.services.map(sid => {
+            const s = this.db.services.find(item => item.id === sid);
+            return s ? s.name : '';
+        }).filter(Boolean).join(', ');
+
+        if (order.status === 'in-progress') {
+            resultContainer.innerHTML = `
+                <div class="guest-plate-badge">${order.carPlate}</div>
+                <div><strong>${order.carModel || 'Автомобиль'}</strong></div>
+                <div class="guest-status-banner in-progress">
+                    <span>🚿 Автомобиль моется в <strong>${box ? box.name : 'боксе'}</strong></span>
+                </div>
+                <p><strong>Выполняемые услуги:</strong> ${serviceNames}</p>
+                <p><strong>Стоимость:</strong> ${order.totalPrice.toLocaleString()} ₸</p>
+                <small class="text-muted">Пожалуйста, ожидайте в комнате отдыха. Мы сообщим о готовности!</small>
+            `;
+        } else if (order.status === 'ready') {
+            resultContainer.innerHTML = `
+                <div class="guest-plate-badge">${order.carPlate}</div>
+                <div><strong>${order.carModel || 'Автомобиль'}</strong></div>
+                <div class="guest-status-banner ready">
+                    <span>✅ Автомобиль готов к выдаче! (${box ? box.name : 'Бокс'})</span>
+                </div>
+                <p><strong>Услуги:</strong> ${serviceNames}</p>
+                <p><strong>К оплате:</strong> <strong style="color:var(--primary); font-size:1.2rem;">${order.totalPrice.toLocaleString()} ₸</strong></p>
+                <small>Вы можете подойти к администратору для расчета и забрать авто.</small>
+            `;
+        } else if (order.status === 'paid') {
+            resultContainer.innerHTML = `
+                <div class="guest-plate-badge">${order.carPlate}</div>
+                <div style="color: #10b981; font-weight: 600; padding: 0.5rem 0;">
+                    ✅ Мойка завершена и оплачена. Спасибо, что выбрали нас!
+                </div>
+            `;
+        }
+    }
+
+    renderGuestBoxesOverview() {
+        const container = document.getElementById('guestBoxesOverview');
+        if (!container) return;
+        container.innerHTML = '';
+
+        this.db.boxes.forEach(box => {
+            const activeOrder = this.db.orders.find(o => o.boxId === box.id && (o.status === 'in-progress' || o.status === 'ready'));
+            const isBusy = !!activeOrder;
+
+            const card = document.createElement('div');
+            card.className = `box-card ${isBusy ? 'busy' : 'free'}`;
+            card.innerHTML = `
+                <div class="box-header">
+                    <h3>${box.name}</h3>
+                    <span class="box-status ${isBusy ? 'busy' : 'free'}">${isBusy ? 'Занят' : 'Свободен'}</span>
+                </div>
+                ${isBusy ? `
+                    <div style="font-size:0.9rem; color:var(--text-muted); margin: 0.5rem 0;">
+                        ${activeOrder.status === 'in-progress' ? '🚿 Идет мойка авто' : '✅ Готово к выдаче'}
+                    </div>
+                ` : `
+                    <div style="color:var(--success); font-weight:500; margin: 0.5rem 0;">Готов к приему авто</div>
+                `}
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    renderGuestPrices() {
+        const tbody = document.getElementById('guestPriceTableBody');
+        const category = document.getElementById('guestPriceCategory').value;
+        const multiplier = CATEGORY_MULTIPLIERS[category] || 1.0;
+
+        tbody.innerHTML = '';
+        this.db.services.forEach(s => {
+            const price = Math.round(s.basePrice * multiplier);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${s.name}</strong></td>
+                <td><strong style="color:var(--primary);">${price.toLocaleString()} ₸</strong></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ==================== ЛОГИКА МОЙЩИКА (РАБОЧЕГО) ====================
+
+    renderWorkerTasks() {
+        const worker = this.db.workers.find(w => w.id === this.currentWorkerId);
+        document.getElementById('workerActiveName').textContent = worker ? worker.name : 'Не выбран';
+
+        const cardsContainer = document.getElementById('workerAssignedCards');
+        cardsContainer.innerHTML = '';
+
+        if (!this.currentWorkerId) {
+            cardsContainer.innerHTML = '<p class="text-muted">Сотрудник не выбран. Нажмите «Сменить режим» и выберите себя.</p>';
+            return;
+        }
+
+        // Задачи в работе и готовые для этого мойщика
+        const myTasks = this.db.orders.filter(o => o.workerId === this.currentWorkerId && (o.status === 'in-progress' || o.status === 'ready'));
+
+        if (myTasks.length === 0) {
+            cardsContainer.innerHTML = `
+                <div class="card" style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 2.5rem;">
+                    <h3>Нет назначенных машин</h3>
+                    <p>Сейчас у вас нет активных автомобилей в боксах. Ожидайте назначения от администратора.</p>
+                </div>
+            `;
+        } else {
+            myTasks.forEach(order => {
+                const box = this.db.boxes.find(b => b.id === order.boxId);
+                const serviceNames = order.services.map(sid => {
+                    const s = this.db.services.find(item => item.id === sid);
+                    return s ? s.name : '';
+                }).filter(Boolean).join(', ');
+
+                const earnedForOrder = Math.round(order.totalPrice * (worker.percent / 100));
+
+                const card = document.createElement('div');
+                card.className = `worker-task-card ${order.status}`;
+                card.innerHTML = `
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                            <span class="badge" style="background:#0f172a; color:#fff; font-size:0.9rem;">${box ? box.name : 'Бокс'}</span>
+                            <span class="status-pill ${order.status}">
+                                ${order.status === 'in-progress' ? '🚿 В процессе' : '✅ Готово'}
+                            </span>
+                        </div>
+                        <h3 style="font-size:1.3rem; margin:0.3rem 0;">${order.carPlate}</h3>
+                        <div class="text-muted">${order.carModel || 'Автомобиль'}</div>
+                        <div style="margin: 0.75rem 0; font-size: 0.9rem;">
+                            <strong>Услуги:</strong> ${serviceNames}
+                        </div>
+                        <div style="font-size:0.85rem; color:#0369a1; background:#e0f2fe; padding:0.4rem 0.6rem; border-radius:6px;">
+                            Ваша выплата за этот авто: <strong>${earnedForOrder.toLocaleString()} ₸</strong> (${worker.percent}%)
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.25rem;">
+                        ${order.status === 'in-progress' ? `
+                            <button class="btn btn-success" style="width:100%;" onclick="app.setOrderReady(${order.id})">
+                                ✅ Завершил мойку (Готово)
+                            </button>
+                        ` : `
+                            <div style="text-align:center; color:#15803d; font-weight:600; font-size:0.9rem;">
+                                Ожидает оплаты у администратора
+                            </div>
+                        `}
+                    </div>
+                `;
+                cardsContainer.appendChild(card);
+            });
+        }
+
+        // Обновление статистики мойщика за сегодня
+        this.updateWorkerStats();
+    }
+
+    updateWorkerStats() {
+        if (!this.currentWorkerId) return;
+
+        const worker = this.db.workers.find(w => w.id === this.currentWorkerId);
+        if (!worker) return;
+
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        let count = 0;
+        let earned = 0;
+
+        this.db.orders.forEach(o => {
+            if (o.workerId === this.currentWorkerId && o.status === 'paid') {
+                const dateStr = new Date(o.paidAt || o.createdAt).toISOString().split('T')[0];
+                if (dateStr === todayStr) {
+                    count++;
+                    earned += Math.round(o.totalPrice * (worker.percent / 100));
+                }
+            }
+        });
+
+        document.getElementById('workerStatsCount').textContent = `${count} авто`;
+        document.getElementById('workerStatsEarned').textContent = `${earned.toLocaleString()} ₸`;
+    }
+
+    renderWorkerHistory() {
+        const tbody = document.getElementById('workerHistoryTableBody');
+        tbody.innerHTML = '';
+
+        if (!this.currentWorkerId) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:2rem;">Сотрудник не выбран.</td></tr>`;
+            return;
+        }
+
+        const worker = this.db.workers.find(w => w.id === this.currentWorkerId);
+        const myHistory = this.db.orders.filter(o => o.workerId === this.currentWorkerId && o.status === 'paid');
+
+        if (myHistory.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#94a3b8; padding:2rem;">У вас пока нет закрытых заказов за смену.</td></tr>`;
+            return;
+        }
+
+        myHistory.forEach(order => {
+            const timeStr = new Date(order.paidAt || order.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            const serviceNames = order.services.map(sid => {
+                const s = this.db.services.find(item => item.id === sid);
+                return s ? s.name : '';
+            }).filter(Boolean).join(', ');
+
+            const earned = Math.round(order.totalPrice * (worker.percent / 100));
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${timeStr}</td>
+                <td><strong>${order.carPlate}</strong></td>
+                <td>${order.carModel || '—'}</td>
+                <td style="font-size:0.85rem; max-width:200px;">${serviceNames}</td>
+                <td>${order.totalPrice.toLocaleString()} ₸</td>
+                <td><strong style="color:var(--primary);">${earned.toLocaleString()} ₸</strong></td>
+                <td><span class="status-pill ready">Выполнено</span></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ==================== ЛОГИКА АДМИНИСТРАТОРА И ВЛАДЕЛЬЦА ====================
+
     renderBoxesAndSelects() {
-        // Контейнер боксов
         const container = document.getElementById('boxesContainer');
         const boxSelect = document.getElementById('orderBox');
         container.innerHTML = '';
         boxSelect.innerHTML = '';
 
         this.db.boxes.forEach(box => {
-            // Найти активный заказ в этом боксе
             const activeOrder = this.db.orders.find(o => o.boxId === box.id && (o.status === 'in-progress' || o.status === 'ready'));
-
             const isBusy = !!activeOrder;
+
             const card = document.createElement('div');
             card.className = `box-card ${isBusy ? 'busy' : 'free'}`;
             card.innerHTML = `
@@ -245,20 +564,19 @@ class CarWashApp {
                         </span>
                     </div>
                 ` : `
-                    <div class="text-muted" style="margin: 1rem 0;">Бокс готов к приему авто</div>
+                    <div class="text-muted" style="margin: 1rem 0;">Бокс свободен</div>
                     <button class="btn btn-outline btn-sm" onclick="app.quickAssignBox(${box.id})">+ Запустить авто</button>
                 `}
             `;
             container.appendChild(card);
 
-            // Селект для формы
             const option = document.createElement('option');
             option.value = box.id;
             option.textContent = `${box.name} ${isBusy ? '(Занят)' : '(Свободен)'}`;
             boxSelect.appendChild(option);
         });
 
-        // Селект мойщиков
+        // Селект мойщиков для формы
         const workerSelect = document.getElementById('orderWorker');
         workerSelect.innerHTML = '';
         this.db.workers.forEach(w => {
@@ -270,6 +588,10 @@ class CarWashApp {
     }
 
     quickAssignBox(boxId) {
+        if (!['admin', 'owner'].includes(this.currentRole)) {
+            alert('Оформлять заезд может только Администратор или Владелец.');
+            return;
+        }
         this.switchTab('newOrder');
         document.getElementById('orderBox').value = boxId;
     }
@@ -313,6 +635,12 @@ class CarWashApp {
     createOrder(event) {
         event.preventDefault();
 
+        // Строгая защита: мойщик не может создать заказ
+        if (!['admin', 'owner'].includes(this.currentRole)) {
+            alert('У мойщиков нет доступа к добавлению машин. Это делает администратор.');
+            return;
+        }
+
         const carPlate = document.getElementById('carPlate').value.trim().toUpperCase();
         const carModel = document.getElementById('carModel').value.trim();
         const category = document.getElementById('carCategory').value;
@@ -348,7 +676,6 @@ class CarWashApp {
         this.db.orders.unshift(newOrder);
         this.saveDatabase();
 
-        // Сброс формы
         event.target.reset();
         this.recalculateTotal();
 
@@ -419,6 +746,11 @@ class CarWashApp {
     }
 
     openPaymentModal(orderId) {
+        if (!['admin', 'owner'].includes(this.currentRole)) {
+            alert('Принимать оплату может только Администратор или Владелец.');
+            return;
+        }
+
         const order = this.db.orders.find(o => o.id === orderId);
         if (!order) return;
 
@@ -504,7 +836,8 @@ class CarWashApp {
         this.renderHistory();
     }
 
-    // Финансы и аналитика (для Владельца)
+    // ==================== КАССА И АНАЛИТИКА (ВЛАДЕЛЕЦ) ====================
+
     renderFinance() {
         const todayStr = new Date().toISOString().split('T')[0];
         const currentMonth = new Date().getMonth();
@@ -527,19 +860,16 @@ class CarWashApp {
             const orderDate = new Date(o.paidAt || o.createdAt);
             const dateStr = orderDate.toISOString().split('T')[0];
 
-            // Сегодня
             if (dateStr === todayStr) {
                 todayIncome += o.totalPrice;
                 todayCount += 1;
             }
 
-            // Месяц
             if (orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear) {
                 monthIncome += o.totalPrice;
                 monthCount += 1;
             }
 
-            // Зарплаты
             if (workerStats[o.workerId]) {
                 workerStats[o.workerId].count += 1;
                 const earned = Math.round(o.totalPrice * (workerStats[o.workerId].percent / 100));
@@ -557,7 +887,6 @@ class CarWashApp {
         document.getElementById('statSalaryFund').textContent = `${totalSalaries.toLocaleString()} ₸`;
         document.getElementById('statNetIncome').textContent = `${(monthIncome - totalSalaries).toLocaleString()} ₸`;
 
-        // Таблица выработки
         const salaryTbody = document.getElementById('workerSalaryTableBody');
         salaryTbody.innerHTML = '';
         Object.values(workerStats).forEach(stat => {
@@ -573,7 +902,6 @@ class CarWashApp {
     }
 
     renderSettings() {
-        // Список сотрудников
         const wList = document.getElementById('workersList');
         wList.innerHTML = '';
         this.db.workers.forEach(w => {
@@ -585,7 +913,6 @@ class CarWashApp {
             wList.appendChild(li);
         });
 
-        // Список услуг
         const sList = document.getElementById('servicesList');
         sList.innerHTML = '';
         this.db.services.forEach(s => {
@@ -639,7 +966,6 @@ class CarWashApp {
         return w ? w.name : '—';
     }
 
-    // Резервное копирование и экспорт
     exportDatabase() {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.db, null, 2));
         const downloadAnchor = document.createElement('a');

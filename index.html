@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="role-guest">
     <div id="app">
         <!-- Шапка приложения -->
         <header class="app-header">
@@ -15,51 +15,228 @@
                 <div class="logo-icon">🚗💦</div>
                 <div>
                     <h1>CarWash Tracker</h1>
-                    <span class="badge" id="currentRoleBadge">Режим: Загрузка...</span>
+                    <span class="badge" id="currentRoleBadge">Режим: Гость / Клиент</span>
                 </div>
             </div>
 
             <div class="header-actions">
                 <div class="shift-info" id="shiftInfo">
-                    <span>Смена: <strong id="shiftDate">Сегодня</strong></span>
+                    <span><strong id="shiftDate">Сегодня</strong></span>
                 </div>
                 <button class="btn btn-outline" id="switchUserBtn" onclick="app.openAuthModal()">
-                    👤 Сменить кабинет
+                    👤 Сменить режим
                 </button>
             </div>
         </header>
 
         <!-- Навигация по вкладкам -->
-        <nav class="nav-tabs">
-            <button class="nav-tab active" data-tab="activeOrders" onclick="app.switchTab('activeOrders')">
-                🚿 Текущая очередь и боксы (<span id="activeCount">0</span>)
+        <nav class="nav-tabs" id="navTabsContainer">
+            <!-- 1. Вкладки ГОСТЯ -->
+            <button class="nav-tab role-tab-guest active" data-tab="guestSearch" onclick="app.switchTab('guestSearch')">
+                🔍 Статус моего авто
             </button>
-            <button class="nav-tab" data-tab="newOrder" onclick="app.switchTab('newOrder')">
+            <button class="nav-tab role-tab-guest" data-tab="guestPrices" onclick="app.switchTab('guestPrices')">
+                📋 Прайс-лист и цены
+            </button>
+            <button class="nav-tab role-tab-guest" data-tab="guestContacts" onclick="app.switchTab('guestContacts')">
+                📍 Контакты мойки
+            </button>
+
+            <!-- 2. Вкладки МОЙЩИКА -->
+            <button class="nav-tab role-tab-worker" data-tab="workerTasks" onclick="app.switchTab('workerTasks')">
+                🚿 Мои назначенные авто
+            </button>
+            <button class="nav-tab role-tab-worker" data-tab="workerHistory" onclick="app.switchTab('workerHistory')">
+                📜 Мои выполненные мойки
+            </button>
+
+            <!-- 3. Вкладки АДМИНИСТРАТОРА И ВЛАДЕЛЬЦА -->
+            <button class="nav-tab role-tab-admin" data-tab="activeOrders" onclick="app.switchTab('activeOrders')">
+                🚿 Боксы и очередь (<span id="activeCount">0</span>)
+            </button>
+            <button class="nav-tab role-tab-admin" data-tab="newOrder" onclick="app.switchTab('newOrder')">
                 ➕ Оформить заезд
             </button>
-            <button class="nav-tab" data-tab="history" onclick="app.switchTab('history')">
-                📜 История и журнал
+            <button class="nav-tab role-tab-admin" data-tab="history" onclick="app.switchTab('history')">
+                📜 Общий журнал
             </button>
-            <button class="nav-tab owner-only" data-tab="finance" onclick="app.switchTab('finance')">
-                💰 Касса и Аналитика (Владелец)
+
+            <!-- 4. Вкладки ТОЛЬКО ВЛАДЕЛЬЦА -->
+            <button class="nav-tab role-tab-owner" data-tab="finance" onclick="app.switchTab('finance')">
+                💰 Касса и Аналитика
             </button>
-            <button class="nav-tab owner-only" data-tab="settings" onclick="app.switchTab('settings')">
+            <button class="nav-tab role-tab-owner" data-tab="settings" onclick="app.switchTab('settings')">
                 ⚙️ Настройки и Персонал
             </button>
         </nav>
 
         <!-- Основной контент -->
         <main class="main-content">
+
+            <!-- ===================== ЭКРАНЫ ГОСТЯ (КЛИЕНТА) ===================== -->
+            
+            <!-- Поиск статуса авто гостем -->
+            <section id="tab-guestSearch" class="tab-content active">
+                <div class="card guest-search-card">
+                    <h2>Проверка готовности автомобиля</h2>
+                    <p class="text-muted">Введите госномер вашего авто, чтобы узнать статус мойки:</p>
+                    
+                    <form class="guest-search-form" onsubmit="app.searchCarStatus(event)">
+                        <input type="text" id="guestSearchPlate" placeholder="например, 777 AAA 01" required autocomplete="off">
+                        <button type="submit" class="btn btn-primary">Проверить статус</button>
+                    </form>
+
+                    <div id="guestSearchResult" class="guest-result-box" style="display: none;">
+                        <!-- Результат поиска авто -->
+                    </div>
+                </div>
+
+                <div class="boxes-overview-guest">
+                    <h3>Занятость боксов прямо сейчас:</h3>
+                    <div class="boxes-grid" id="guestBoxesOverview">
+                        <!-- Мини карточки боксов для клиентов -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Прайс-лист для гостя -->
+            <section id="tab-guestPrices" class="tab-content">
+                <div class="card">
+                    <div class="section-header">
+                        <h2>Прайс-лист услуг</h2>
+                        <div class="filter-group">
+                            <label>Ваш кузов: </label>
+                            <select id="guestPriceCategory" onchange="app.renderGuestPrices()">
+                                <option value="sedan">1 класс — Седан / Хэтчбек</option>
+                                <option value="crossover">2 класс — Кроссовер / Универсал</option>
+                                <option value="suv">3 класс — Внедорожник / Джип</option>
+                                <option value="minivan">4 класс — Микроавтобус</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Услуга</th>
+                                    <th>Стоимость</th>
+                                </tr>
+                            </thead>
+                            <tbody id="guestPriceTableBody">
+                                <!-- Прайс -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Контакты для гостя -->
+            <section id="tab-guestContacts" class="tab-content">
+                <div class="card">
+                    <h2>Контакты и график работы</h2>
+                    <div class="contacts-grid">
+                        <div class="contact-item">
+                            <div class="contact-icon">📍</div>
+                            <div>
+                                <strong>Адрес:</strong>
+                                <p>г. Астана / Алматы, ул. Автомобильная, 12/1</p>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon">🕒</div>
+                            <div>
+                                <strong>График работы:</strong>
+                                <p>Ежедневно с 08:00 до 23:00 (без выходных)</p>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon">📞</div>
+                            <div>
+                                <strong>Телефон / WhatsApp:</strong>
+                                <p>+7 (777) 123-45-67</p>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon">☕</div>
+                            <div>
+                                <strong>Зона ожидания:</strong>
+                                <p>Комфортный зал, зерновой кофе, бесплатный Wi-Fi, ТВ</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ===================== ЭКРАНЫ МОЙЩИКА (РАБОЧЕГО) ===================== -->
+            
+            <!-- Мои назначенные машины -->
+            <section id="tab-workerTasks" class="tab-content">
+                <div class="worker-welcome-bar card">
+                    <div>
+                        <span class="text-muted">Рабочая смена мойщика:</span>
+                        <h2 id="workerActiveName">Выберите сотрудника</h2>
+                    </div>
+                    <div class="worker-quick-stats">
+                        <div class="stat-mini">
+                            <span>Вымыто сегодня:</span>
+                            <strong id="workerStatsCount">0 авто</strong>
+                        </div>
+                        <div class="stat-mini highlight">
+                            <span>Мой заработок за смену:</span>
+                            <strong id="workerStatsEarned">0 ₸</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-header">
+                    <h2>Мои машины в работе</h2>
+                </div>
+
+                <div id="workerAssignedCards" class="worker-cards-grid">
+                    <!-- Карточки задач мойщика -->
+                </div>
+            </section>
+
+            <!-- Моя история моек -->
+            <section id="tab-workerHistory" class="tab-content">
+                <div class="card">
+                    <h2>Мои выполненные автомобили за сегодня</h2>
+                    <p class="text-muted">Список машин, которые вы помыли, и начисленный заработок:</p>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Время</th>
+                                    <th>Госномер</th>
+                                    <th>Модель</th>
+                                    <th>Услуги</th>
+                                    <th>Стоимость мойки</th>
+                                    <th>Ваш заработок</th>
+                                    <th>Статус</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workerHistoryTableBody">
+                                <!-- Список выполненных -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ===================== ЭКРАНЫ АДМИНИСТРАТОРА И ВЛАДЕЛЬЦА ===================== -->
+
             <!-- 1. ТЕКУЩИЕ ЗАКАЗЫ И БОКСЫ -->
-            <section id="tab-activeOrders" class="tab-content active">
+            <section id="tab-activeOrders" class="tab-content">
                 <div class="boxes-grid" id="boxesContainer">
-                    <!-- Карточки боксов рендерятся через JS -->
+                    <!-- Карточки боксов -->
                 </div>
 
                 <div class="section-header">
                     <h2>Машины в работе и очереди</h2>
                     <button class="btn btn-primary" onclick="app.switchTab('newOrder')">
-                        + Добавить машину
+                        + Оформить заезд
                     </button>
                 </div>
 
@@ -86,10 +263,11 @@
                 </div>
             </section>
 
-            <!-- 2. НОВЫЙ ЗАКАЗ (Оформление авто) -->
+            <!-- 2. НОВЫЙ ЗАКАЗ (Оформление авто - ТОЛЬКО ДЛЯ АДМИНА/ВЛАДЕЛЬЦА) -->
             <section id="tab-newOrder" class="tab-content">
                 <div class="card form-card">
                     <h2>Оформление нового авто</h2>
+                    <p class="text-muted">Заполните данные для запуска автомобиля в бокс:</p>
                     <form id="orderForm" onsubmit="app.createOrder(event)">
                         <div class="form-grid">
                             <div class="form-group">
@@ -115,19 +293,19 @@
                             <div class="form-group">
                                 <label for="orderBox">Назначить бокс *</label>
                                 <select id="orderBox" required>
-                                    <!-- Динамически из списка боксов -->
+                                    <!-- Боксы -->
                                 </select>
                             </div>
 
                             <div class="form-group">
                                 <label for="orderWorker">Ответственный мойщик *</label>
                                 <select id="orderWorker" required>
-                                    <!-- Динамически из списка сотрудников -->
+                                    <!-- Мойщики -->
                                 </select>
                             </div>
 
                             <div class="form-group">
-                                <label for="clientPhone">Телефон клиента (для SMS / WhatsApp)</label>
+                                <label for="clientPhone">Телефон клиента (для SMS / связи)</label>
                                 <input type="tel" id="clientPhone" placeholder="+7 (___) ___-__-__">
                             </div>
                         </div>
@@ -135,7 +313,7 @@
                         <div class="services-selection">
                             <label class="block-label">Выберите услуги:</label>
                             <div class="services-list" id="servicesCheckboxes">
-                                <!-- Чекбоксы услуг генерируются динамически -->
+                                <!-- Чекбоксы услуг -->
                             </div>
                         </div>
 
@@ -153,10 +331,10 @@
                 </div>
             </section>
 
-            <!-- 3. ИСТОРИЯ И ЖУРНАЛ -->
+            <!-- 3. ИСТОРИЯ И ЖУРНАЛ (ДЛЯ АДМИНА И ВЛАДЕЛЬЦА) -->
             <section id="tab-history" class="tab-content">
                 <div class="section-header">
-                    <h2>Журнал всех вымытых автомобилей</h2>
+                    <h2>Общий журнал вымытых автомобилей</h2>
                     <div class="filter-group">
                         <input type="date" id="historyDateFilter" onchange="app.renderHistory()">
                         <button class="btn btn-outline" onclick="app.resetHistoryFilter()">Сбросить</button>
@@ -186,8 +364,11 @@
                 </div>
             </section>
 
-            <!-- 4. КАССА И АНАЛИТИКА (ТОЛЬКО ДЛЯ ВЛАДЕЛЬЦА) -->
-            <section id="tab-finance" class="tab-content owner-only">
+
+            <!-- ===================== ЭКРАНЫ ТОЛЬКО ВЛАДЕЛЬЦА ===================== -->
+
+            <!-- 4. КАССА И АНАЛИТИКА -->
+            <section id="tab-finance" class="tab-content">
                 <div class="finance-stats-grid">
                     <div class="stat-card">
                         <span class="stat-title">Выручка за сегодня</span>
@@ -229,10 +410,10 @@
 
                     <div class="card">
                         <h3>Резервное копирование базы данных</h3>
-                        <p class="text-muted">Все ваши данные хранятся надежно. Вы можете скачать резервную копию или загрузить ее на другой компьютер.</p>
-                        <div class="btn-group">
+                        <p class="text-muted">Все данные хранятся локально. Вы можете скачать резервную копию или загрузить ее на другой компьютер.</p>
+                        <div class="btn-group" style="display:flex; gap:0.5rem; margin-top:1rem;">
                             <button class="btn btn-outline" onclick="app.exportDatabase()">💾 Скачать базу (.json)</button>
-                            <label class="btn btn-outline file-label">
+                            <label class="btn btn-outline file-label" style="cursor:pointer;">
                                 📥 Восстановить базу
                                 <input type="file" id="importDatabaseFile" accept=".json" onchange="app.importDatabase(event)" style="display:none;">
                             </label>
@@ -241,8 +422,8 @@
                 </div>
             </section>
 
-            <!-- 5. НАСТРОЙКИ (ТОЛЬКО ДЛЯ ВЛАДЕЛЬЦА) -->
-            <section id="tab-settings" class="tab-content owner-only">
+            <!-- 5. НАСТРОЙКИ (ТОЛЬКО ВЛАДЕЛЕЦ) -->
+            <section id="tab-settings" class="tab-content">
                 <div class="two-columns">
                     <div class="card">
                         <h3>Список сотрудников (мойщиков)</h3>
@@ -267,35 +448,65 @@
 
                 <div class="card" style="margin-top: 1.5rem;">
                     <h3>Пароль Владельца</h3>
-                    <p class="text-muted">Этот пароль защищает доступ к кассе, настройкам и зарплатам.</p>
+                    <p class="text-muted">Этот пароль защищает доступ к кассе, настройкам и общим зарплатам.</p>
                     <div class="inline-form">
                         <input type="password" id="newOwnerPassword" placeholder="Новый пароль владельца">
                         <button class="btn btn-primary" onclick="app.changeOwnerPassword()">Сохранить пароль</button>
                     </div>
                 </div>
             </section>
+
         </main>
 
-        <!-- МОДАЛЬНОЕ ОКНО: АВТОРИЗАЦИЯ / СМЕНА КАБИНЕТА -->
+        <!-- МОДАЛЬНОЕ ОКНО: ВЫБОР РЕЖИМА И ВХОД -->
         <div class="modal-backdrop" id="authModal">
-            <div class="modal-window">
-                <h2>Вход в систему</h2>
-                <p class="text-muted">Выберите роль для продолжения работы:</p>
+            <div class="modal-window auth-modal-large">
+                <h2>Выберите режим работы</h2>
+                <p class="text-muted">Выберите нужный доступ для входа:</p>
 
-                <div class="role-selector">
-                    <button class="role-card" onclick="app.loginAsWorker()">
-                        <div class="role-icon">🧽</div>
-                        <div class="role-title">Рабочий / Администратор</div>
-                        <p>Оформление машин, боксы, прием оплаты</p>
+                <div class="role-grid-four">
+                    <!-- Режим Гостя -->
+                    <button class="role-card" onclick="app.loginAsGuest()">
+                        <div class="role-icon">🚗</div>
+                        <div class="role-title">Клиент / Гость</div>
+                        <p>Проверка статуса авто и прайс-лист</p>
                     </button>
 
+                    <!-- Режим Мойщика -->
+                    <button class="role-card" onclick="app.showWorkerSelector()">
+                        <div class="role-icon">🧽</div>
+                        <div class="role-title">Мойщик</div>
+                        <p>Только мои машины и моя выработка</p>
+                    </button>
+
+                    <!-- Режим Администратора -->
+                    <button class="role-card" onclick="app.loginAsAdmin()">
+                        <div class="role-icon">📋</div>
+                        <div class="role-title">Администратор</div>
+                        <p>Прием авто, боксы, расчет заказов</p>
+                    </button>
+
+                    <!-- Режим Владельца -->
                     <button class="role-card" onclick="app.showOwnerLoginForm()">
                         <div class="role-icon">👑</div>
-                        <div class="role-title">Владелец (Директор)</div>
-                        <p>Касса, полная статистика, зарплаты, настройки</p>
+                        <div class="role-title">Владелец</div>
+                        <p>Полная касса, прибыль, зарплаты, настройки</p>
                     </button>
                 </div>
 
+                <!-- Блок выбора конкретного мойщика -->
+                <div id="workerSelectBlock" style="display: none; margin-top: 1.5rem;">
+                    <label>Выберите себя из списка сотрудников:</label>
+                    <select id="workerModalSelect" style="width: 100%; margin-top: 0.5rem;">
+                        <!-- Заполняется динамически -->
+                    </select>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                        <button class="btn btn-outline" onclick="app.hideWorkerSelector()">Назад</button>
+                        <button class="btn btn-primary" onclick="app.confirmWorkerLogin()">Войти в смену</button>
+                    </div>
+                </div>
+
+                <!-- Блок ввода пароля владельца -->
                 <div id="ownerPasswordBlock" style="display: none; margin-top: 1.5rem;">
                     <label>Введите пароль владельца:</label>
                     <input type="password" id="ownerPasswordInput" placeholder="По умолчанию: 1234">
@@ -308,6 +519,10 @@
                             Забыли пароль?
                         </a>
                     </div>
+                </div>
+
+                <div style="margin-top: 1.25rem; text-align: right;">
+                    <button class="btn btn-outline btn-sm" onclick="app.closeAuthModal()">Закрыть</button>
                 </div>
             </div>
         </div>
