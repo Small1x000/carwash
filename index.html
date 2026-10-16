@@ -37,15 +37,20 @@
             </div>
 
             <div class="header-actions">
+                <div class="lang-switcher" id="langSwitcher" role="group" aria-label="Язык интерфейса">
+                    <button type="button" class="lang-btn active" data-lang="ru" onclick="app.setLanguage('ru')">RU</button>
+                    <button type="button" class="lang-btn" data-lang="kk" onclick="app.setLanguage('kk')">ҚАЗ</button>
+                    <button type="button" class="lang-btn" data-lang="en" onclick="app.setLanguage('en')">EN</button>
+                </div>
                 <div class="shift-info" id="shiftInfo">
                     <span id="shiftDate">Загрузка...</span>
-                    <span class="badge" style="background:#059669; color:#fff; margin-left:0.4rem; font-size:0.75rem;">🕒 24/7 Круглосуточно</span>
+                    <span class="badge" id="shiftBadge247" style="background:#059669; color:#fff; margin-left:0.4rem; font-size:0.75rem;">🕒 24/7 Круглосуточно</span>
                 </div>
                 <button class="btn btn-outline" id="themeToggleBtn" type="button" onclick="app.toggleTheme()" title="Переключить тему (Светлая / Темная)">
-                    🌙 <span class="hide-mobile">Тема</span>
+                    🌙 <span class="hide-mobile" id="themeToggleText">Тема</span>
                 </button>
                 <button class="btn btn-outline" id="qrCodeHeaderBtn" type="button" onclick="app.openQrModal()" title="QR-код сайта для клиентов">
-                    📱 <span class="hide-mobile">QR-код</span>
+                    📱 <span class="hide-mobile" id="qrCodeHeaderText">QR-код</span>
                 </button>
                 <button class="btn btn-outline" id="switchUserBtn" type="button" onclick="app.handleAuthButtonClick()">
                     <span id="switchUserBtnText">👤 Войти</span>
@@ -56,52 +61,52 @@
         <!-- Навигация по вкладкам -->
         <nav class="nav-tabs" id="navTabsContainer" aria-label="Разделы приложения">
             <!-- 1. Вкладки ГОСТЯ / КЛИЕНТА -->
-            <button class="nav-tab role-tab-guest active" data-tab="guestBooking" type="button" onclick="app.switchTab('guestBooking')">
+            <button class="nav-tab role-tab-guest active" data-tab="guestBooking" data-i18n="tabGuestBooking" type="button" onclick="app.switchTab('guestBooking')">
                 📅 Записаться и мои брони
             </button>
-            <button class="nav-tab role-tab-guest" data-tab="guestCars" type="button" onclick="app.switchTab('guestCars')">
+            <button class="nav-tab role-tab-guest" data-tab="guestCars" data-i18n="tabGuestCars" type="button" onclick="app.switchTab('guestCars')">
                 🚗 Мои автомобили
             </button>
-            <button class="nav-tab role-tab-guest" data-tab="guestSearch" type="button" onclick="app.switchTab('guestSearch')">
+            <button class="nav-tab role-tab-guest" data-tab="guestSearch" data-i18n="tabGuestSearch" type="button" onclick="app.switchTab('guestSearch')">
                 🔍 Статус авто онлайн
             </button>
-            <button class="nav-tab role-tab-guest" data-tab="guestPrices" type="button" onclick="app.switchTab('guestPrices')">
+            <button class="nav-tab role-tab-guest" data-tab="guestPrices" data-i18n="tabGuestPrices" type="button" onclick="app.switchTab('guestPrices')">
                 📋 Прайс-лист и цены
             </button>
-            <button class="nav-tab role-tab-guest" data-tab="guestContacts" type="button" onclick="app.switchTab('guestContacts')">
+            <button class="nav-tab role-tab-guest" data-tab="guestContacts" data-i18n="tabGuestContacts" type="button" onclick="app.switchTab('guestContacts')">
                 📍 Контакты мойки
             </button>
 
             <!-- 2. Вкладки МОЙЩИКА -->
-            <button class="nav-tab role-tab-worker" data-tab="workerTasks" type="button" onclick="app.switchTab('workerTasks')">
+            <button class="nav-tab role-tab-worker" data-tab="workerTasks" data-i18n="tabWorkerTasks" type="button" onclick="app.switchTab('workerTasks')">
                 🚿 Мои назначенные авто
             </button>
-            <button class="nav-tab role-tab-worker" data-tab="workerHistory" type="button" onclick="app.switchTab('workerHistory')">
+            <button class="nav-tab role-tab-worker" data-tab="workerHistory" data-i18n="tabWorkerHistory" type="button" onclick="app.switchTab('workerHistory')">
                 📜 Мои выполненные мойки
             </button>
 
             <!-- 3. Вкладки АДМИНИСТРАТОРА И ВЛАДЕЛЬЦА -->
             <button class="nav-tab role-tab-admin" data-tab="activeOrders" type="button" onclick="app.switchTab('activeOrders')">
-                🚿 10 Боксов и очередь (<span id="activeCount">0</span>)
+                <span data-i18n="tabActiveOrders">🚿 10 Боксов и очередь</span> (<span id="activeCount">0</span>)
             </button>
             <button class="nav-tab role-tab-admin" data-tab="adminBookings" type="button" onclick="app.switchTab('adminBookings')">
-                📅 Заявки на бронь (<span id="pendingBookingsCount">0</span>)
+                <span data-i18n="tabAdminBookings">📅 Заявки на бронь</span> (<span id="pendingBookingsCount">0</span>)
             </button>
             <button class="nav-tab role-tab-admin" data-tab="adminWaitlist" type="button" onclick="app.switchTab('adminWaitlist')">
-                ⏱ Лист ожидания (<span id="waitlistCount">0</span>)
+                <span data-i18n="tabAdminWaitlist">⏱ Лист ожидания</span> (<span id="waitlistCount">0</span>)
             </button>
-            <button class="nav-tab role-tab-admin" data-tab="newOrder" type="button" onclick="app.switchTab('newOrder')">
+            <button class="nav-tab role-tab-admin" data-tab="newOrder" data-i18n="tabNewOrder" type="button" onclick="app.switchTab('newOrder')">
                 ➕ Оформить заезд
             </button>
-            <button class="nav-tab role-tab-admin" data-tab="history" type="button" onclick="app.switchTab('history')">
+            <button class="nav-tab role-tab-admin" data-tab="history" data-i18n="tabHistory" type="button" onclick="app.switchTab('history')">
                 📜 Общий журнал
             </button>
 
             <!-- 4. Вкладки ТОЛЬКО ВЛАДЕЛЬЦА -->
-            <button class="nav-tab role-tab-owner" data-tab="finance" type="button" onclick="app.switchTab('finance')">
+            <button class="nav-tab role-tab-owner" data-tab="finance" data-i18n="tabFinance" type="button" onclick="app.switchTab('finance')">
                 💰 Касса и Аналитика
             </button>
-            <button class="nav-tab role-tab-owner" data-tab="settings" type="button" onclick="app.switchTab('settings')">
+            <button class="nav-tab role-tab-owner" data-tab="settings" data-i18n="tabSettings" type="button" onclick="app.switchTab('settings')">
                 ⚙️ Настройки и Безопасность
             </button>
         </nav>
@@ -141,78 +146,98 @@
 
                 <div class="two-columns">
                     <!-- Форма бронирования -->
-                    <div class="card">
-                        <h2 id="guestBookingTitle">📅 Онлайн-бронирование времени</h2>
-                        <p class="text-muted">Забронируйте удобное время. Мы работаем <strong>круглосуточно 24/7</strong>! Администратор подтвердит заявку и подготовит бокс к вашему приезду.</p>
-
-                        <form id="bookingForm" onsubmit="app.createBooking(event)" style="margin-top: 1rem;">
-                            <div class="form-group" style="margin-bottom: 0.75rem;">
-                                <label for="bookingCarSelect">Выберите автомобиль *</label>
-                                <select id="bookingCarSelect" onchange="app.onBookingCarSelected()" required>
-                                    <option value="new">+ Ввести другой автомобиль...</option>
-                                </select>
+                    <div class="card" id="bookingFormCard">
+                        <!-- Авторизационный шлюз для неавторизованных гостей -->
+                        <div id="guestBookingAuthGate" class="auth-gate-card" style="display:none;">
+                            <div style="font-size:2.8rem; margin-bottom:0.5rem;">🚗🔑</div>
+                            <h2 style="font-size:1.3rem; margin-bottom:0.5rem;" id="authGateTitle" data-i18n="authGateTitle">Для онлайн-записи необходимо войти или зарегистрироваться</h2>
+                            <p class="text-muted" style="max-width:500px; margin:0 auto 1.25rem; font-size:0.9rem;" id="authGateDesc" data-i18n="authGateDesc">
+                                Создайте аккаунт за 30 секунд или войдите по номеру телефона, чтобы выбрать свой автомобиль, время мойки и занять очередь в бокс.
+                            </p>
+                            <div style="display:flex; justify-content:center; gap:0.75rem; flex-wrap:wrap;">
+                                <button class="btn btn-primary" type="button" onclick="app.openAuthModal('login')" id="authGateLoginBtn" data-i18n="authGateLoginBtn">
+                                    🔑 Войти в аккаунт
+                                </button>
+                                <button class="btn btn-outline" type="button" onclick="app.openAuthModal('register')" id="authGateRegBtn" data-i18n="authGateRegBtn">
+                                    ✨ Быстрая регистрация
+                                </button>
                             </div>
+                        </div>
 
-                            <div class="form-grid" id="bookingCustomCarFields">
-                                <div class="form-group">
-                                    <label for="bookingPlate">Госномер авто *</label>
-                                    <input type="text" id="bookingPlate" placeholder="например, 777 AAA 01" required maxlength="15" autocomplete="off">
-                                </div>
-                                <div class="form-group">
-                                    <label for="bookingModel">Марка и модель</label>
-                                    <input type="text" id="bookingModel" placeholder="например, Toyota Camry" autocomplete="off" maxlength="40">
-                                </div>
-                            </div>
+                        <!-- Содержимое формы онлайн-бронирования (доступно авторизованным) -->
+                        <div id="bookingFormContent">
+                            <h2 id="guestBookingTitle" data-i18n="bookingTitle">📅 Онлайн-бронирование времени</h2>
+                            <p class="text-muted" data-i18n="bookingDesc">Забронируйте удобное время. Мы работаем <strong>круглосуточно 24/7</strong>! Администратор подтвердит заявку и подготовит бокс к вашему приезду.</p>
 
-                            <div class="form-group" style="margin-top: 0.75rem;">
-                                <label for="bookingCategory">Класс кузова *</label>
-                                <select id="bookingCategory" required onchange="app.recalculateBookingTotal()">
-                                    <option value="sedan">1 класс — Седан / Хэтчбек</option>
-                                    <option value="crossover">2 класс — Кроссовер / Универсал</option>
-                                    <option value="suv">3 класс — Внедорожник / Джип</option>
-                                    <option value="minivan">4 класс — Микроавтобус / Коммерческий</option>
-                                </select>
-                            </div>
-
-                            <div class="form-grid" style="margin-top: 0.75rem;">
-                                <div class="form-group">
-                                    <label for="bookingDate">Желаемая дата *</label>
-                                    <input type="date" id="bookingDate" required onchange="app.renderAvailableTimeSlots()">
-                                </div>
-                                <div class="form-group">
-                                    <label for="bookingTime">Время заезда *</label>
-                                    <select id="bookingTime" required>
-                                        <!-- Временные слоты генерируются через JS -->
+                            <form id="bookingForm" onsubmit="app.createBooking(event)" style="margin-top: 1rem;">
+                                <div class="form-group" style="margin-bottom: 0.75rem;">
+                                    <label for="bookingCarSelect" data-i18n="bookingCarSelect">Выберите автомобиль *</label>
+                                    <select id="bookingCarSelect" onchange="app.onBookingCarSelected()" required>
+                                        <option value="new" data-i18n="bookingNewCar">+ Ввести другой автомобиль...</option>
                                     </select>
                                 </div>
-                            </div>
 
-                            <div class="form-grid" style="margin-top: 0.75rem;">
-                                <div class="form-group">
-                                    <label for="bookingClientName">Ваше имя *</label>
-                                    <input type="text" id="bookingClientName" placeholder="Иван" required maxlength="30">
+                                <div class="form-grid" id="bookingCustomCarFields">
+                                    <div class="form-group">
+                                        <label for="bookingPlate" data-i18n="bookingPlate">Госномер авто *</label>
+                                        <input type="text" id="bookingPlate" placeholder="например, 777 AAA 01" required maxlength="15" autocomplete="off">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="bookingModel" data-i18n="bookingModel">Марка и модель</label>
+                                        <input type="text" id="bookingModel" placeholder="например, Toyota Camry" autocomplete="off" maxlength="40">
+                                    </div>
                                 </div>
-                                <div class="form-group">
-                                    <label for="bookingClientPhone">Телефон для связи *</label>
-                                    <input type="tel" id="bookingClientPhone" placeholder="+7 (777) 123-45-67" required maxlength="25">
-                                </div>
-                            </div>
 
-                            <div class="services-selection" style="margin-top: 1rem;">
-                                <label class="block-label">Выберите желаемые услуги:</label>
-                                <div class="services-list" id="bookingServicesCheckboxes">
-                                    <!-- Чекбоксы услуг -->
+                                <div class="form-group" style="margin-top: 0.75rem;">
+                                    <label for="bookingCategory" data-i18n="bookingCategory">Класс кузова *</label>
+                                    <select id="bookingCategory" required onchange="app.recalculateBookingTotal()">
+                                        <option value="sedan">1 класс — Седан / Хэтчбек</option>
+                                        <option value="crossover">2 класс — Кроссовер / Универсал</option>
+                                        <option value="suv">3 класс — Внедорожник / Джип</option>
+                                        <option value="minivan">4 класс — Микроавтобус / Коммерческий</option>
+                                    </select>
                                 </div>
-                            </div>
 
-                            <div class="order-summary-bar">
-                                <div class="total-calc">
-                                    <span>Предварительно:</span>
-                                    <strong id="bookingCalculatedPrice">0 ₸</strong>
+                                <div class="form-grid" style="margin-top: 0.75rem;">
+                                    <div class="form-group">
+                                        <label for="bookingDate" data-i18n="bookingDate">Желаемая дата *</label>
+                                        <input type="date" id="bookingDate" required onchange="app.renderAvailableTimeSlots()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="bookingTime" data-i18n="bookingTime">Время заезда *</label>
+                                        <select id="bookingTime" required>
+                                            <!-- Временные слоты генерируются через JS -->
+                                        </select>
+                                    </div>
                                 </div>
-                                <button type="submit" class="btn btn-primary" id="submitBookingBtn">📅 Отправить заявку</button>
-                            </div>
-                        </form>
+
+                                <div class="form-grid" style="margin-top: 0.75rem;">
+                                    <div class="form-group">
+                                        <label for="bookingClientName" data-i18n="bookingName">Ваше имя *</label>
+                                        <input type="text" id="bookingClientName" placeholder="Иван" required maxlength="30">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="bookingClientPhone" data-i18n="bookingPhone">Телефон для связи *</label>
+                                        <input type="tel" id="bookingClientPhone" placeholder="+7 (777) 123-45-67" required maxlength="25">
+                                    </div>
+                                </div>
+
+                                <div class="services-selection" style="margin-top: 1rem;">
+                                    <label class="block-label" data-i18n="bookingServices">Выберите желаемые услуги:</label>
+                                    <div class="services-list" id="bookingServicesCheckboxes">
+                                        <!-- Чекбоксы услуг -->
+                                    </div>
+                                </div>
+
+                                <div class="order-summary-bar">
+                                    <div class="total-calc">
+                                        <span data-i18n="bookingEstimated">Предварительно:</span>
+                                        <strong id="bookingCalculatedPrice">0 ₸</strong>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary" id="submitBookingBtn" data-i18n="bookingSubmit">📅 Отправить заявку</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
 
                     <!-- Мои активные бронирования -->
@@ -892,51 +917,55 @@
         <div class="modal-backdrop" id="authModal" role="dialog" aria-modal="true" aria-labelledby="unifiedAuthTitle">
             <div class="modal-window" style="max-width:440px;">
                 <div class="client-modal-tabs">
-                    <button class="client-modal-tab active" id="tabBtnUnifiedLogin" type="button" onclick="app.switchAuthTab('login')">🔑 Вход в систему</button>
-                    <button class="client-modal-tab" id="tabBtnUnifiedRegister" type="button" onclick="app.switchAuthTab('register')">✨ Регистрация</button>
+                    <button class="client-modal-tab active" id="tabBtnUnifiedLogin" type="button" onclick="app.switchAuthTab('login')" data-i18n="authLoginTab">🔑 Вход в систему</button>
+                    <button class="client-modal-tab" id="tabBtnUnifiedRegister" type="button" onclick="app.switchAuthTab('register')" data-i18n="authRegTab">✨ Регистрация</button>
+                    <button class="client-modal-tab" id="tabBtnUnifiedForgot" type="button" onclick="app.switchAuthTab('forgot')" style="display:none;" data-i18n="forgotTitle">🔒 Сброс пароля</button>
                 </div>
 
                 <!-- ФОРМА 1: ВХОД (ДЛЯ ВСЕХ: ВЛАДЕЛЕЦ АЛИМЖАН, ПЕРСОНАЛ, КЛИЕНТЫ) -->
                 <form id="unifiedLoginForm" onsubmit="app.submitUnifiedLogin(event)" style="margin-top: 1rem;">
-                    <h3 id="unifiedAuthTitle" style="font-size:1.15rem; margin-bottom:0.25rem;">Вход в аккаунт</h3>
-                    <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">Введите ваш номер телефона и пароль. Роль определяется автоматически.</p>
+                    <h3 id="unifiedAuthTitle" style="font-size:1.15rem; margin-bottom:0.25rem;" data-i18n="authLoginTitle">Вход в аккаунт</h3>
+                    <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;" id="unifiedLoginDesc" data-i18n="authLoginDesc">Введите ваш номер телефона и пароль. Роль определяется автоматически.</p>
 
                     <div class="form-group" style="margin-top: 0.75rem;">
-                        <label for="unifiedLoginPhone">Номер телефона:</label>
+                        <label for="unifiedLoginPhone" id="labelLoginPhone" data-i18n="authPhone">Номер телефона:</label>
                         <input type="tel" id="unifiedLoginPhone" placeholder="+7 (701) 000-00-00" required maxlength="25" autocomplete="username">
                     </div>
 
                     <div class="form-group" style="margin-top: 0.75rem;">
-                        <label for="unifiedLoginPass">Пароль:</label>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <label for="unifiedLoginPass" id="labelLoginPass" data-i18n="authPass">Пароль:</label>
+                            <button type="button" onclick="app.openForgotPassword()" style="font-size:0.8rem; color:var(--primary); background:none; border:none; cursor:pointer; padding:0; text-decoration:underline;" id="forgotPassLink" data-i18n="authForgotLink">Забыли пароль?</button>
+                        </div>
                         <input type="password" id="unifiedLoginPass" placeholder="••••••••" required minlength="3" autocomplete="current-password">
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.25rem; gap:0.5rem;">
-                        <button class="btn btn-outline" type="button" onclick="app.closeAuthModal()">Отмена</button>
-                        <button class="btn btn-primary" type="submit" style="flex:1;">Войти</button>
+                        <button class="btn btn-outline" type="button" onclick="app.closeAuthModal()" id="btnCancelLogin" data-i18n="authCancel">Отмена</button>
+                        <button class="btn btn-primary" type="submit" style="flex:1;" id="btnSubmitLogin" data-i18n="authSubmitLogin">Войти</button>
                     </div>
 
                     <div style="margin-top:1rem; text-align:center;">
-                        <span class="text-muted" style="font-size:0.8rem;">Впервые на сайте? </span>
-                        <button type="button" onclick="app.switchAuthTab('register')" style="font-size:0.82rem; font-weight:600; color:var(--primary); background:none; border:none; cursor:pointer; padding:0;">Зарегистрироваться как клиент</button>
+                        <span class="text-muted" style="font-size:0.8rem;" id="firstTimeText" data-i18n="authFirstTime">Впервые на сайте? </span>
+                        <button type="button" onclick="app.switchAuthTab('register')" style="font-size:0.82rem; font-weight:600; color:var(--primary); background:none; border:none; cursor:pointer; padding:0;" id="btnGoToReg" data-i18n="authGoReg">Зарегистрироваться как клиент</button>
                     </div>
                 </form>
 
                 <!-- ФОРМА 2: РЕГИСТРАЦИЯ КЛИЕНТА (С ПРОВЕРКОЙ НОМЕРА SMS-КОДОМ) -->
                 <form id="unifiedRegisterForm" onsubmit="app.registerUnifiedClient(event)" style="display:none; margin-top: 1rem;">
-                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem;">Регистрация клиента</h3>
-                    <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">Создайте аккаунт для сохранения своих авто и управления бронированиями.</p>
+                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem;" data-i18n="authRegTitle">Регистрация клиента</h3>
+                    <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;" data-i18n="authRegDesc">Создайте аккаунт для сохранения своих авто и управления бронированиями.</p>
 
                     <div class="form-group" style="margin-top: 0.75rem;">
-                        <label for="unifiedRegName">Ваше имя *</label>
+                        <label for="unifiedRegName" data-i18n="authName">Ваше имя *</label>
                         <input type="text" id="unifiedRegName" placeholder="Например: Алишер" required maxlength="30" autocomplete="name">
                     </div>
 
                     <div class="form-group" style="margin-top: 0.75rem;">
-                        <label for="unifiedRegPhone">Номер телефона *</label>
+                        <label for="unifiedRegPhone" data-i18n="authPhone">Номер телефона *</label>
                         <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
                             <input type="tel" id="unifiedRegPhone" placeholder="+7 (701) 000-00-00" required maxlength="25" style="flex:1;" autocomplete="tel">
-                            <button class="btn btn-outline" type="button" id="btnSendSmsCode" onclick="app.sendVerificationCode()" style="white-space:nowrap; font-size:0.82rem; padding:0.4rem 0.65rem;">
+                            <button class="btn btn-outline" type="button" id="btnSendSmsCode" onclick="app.sendVerificationCode()" style="white-space:nowrap; font-size:0.82rem; padding:0.4rem 0.65rem;" data-i18n="authGetCode">
                                 📲 Получить код
                             </button>
                         </div>
@@ -944,27 +973,74 @@
 
                     <!-- Блок ввода проверочного кода -->
                     <div id="smsCodeContainer" style="display:none; background:var(--bg-page); padding:0.85rem; border-radius:var(--radius); border:1px solid var(--border); margin-top:0.75rem;">
-                        <label for="unifiedRegCode" style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem;">Код из SMS-сообщения (4 цифры):</label>
+                        <label for="unifiedRegCode" style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem;" data-i18n="authCodeLabel">Код из SMS-сообщения (4 цифры):</label>
                         <div style="display:flex; gap:0.5rem;">
                             <input type="text" id="unifiedRegCode" placeholder="4892" maxlength="6" inputmode="numeric" style="flex:1; font-size:1.15rem; letter-spacing:3px; font-weight:700; text-align:center;">
-                            <button class="btn btn-success" type="button" id="btnVerifyCode" onclick="app.confirmVerificationCode()" style="white-space:nowrap;">Проверить</button>
+                            <button class="btn btn-success" type="button" id="btnVerifyCode" onclick="app.confirmVerificationCode()" style="white-space:nowrap;" data-i18n="authVerifyCode">Проверить</button>
                         </div>
                         <div id="codeVerificationStatus" style="margin-top:0.5rem;"></div>
                     </div>
 
                     <div class="form-group" style="margin-top: 0.75rem;">
-                        <label for="unifiedRegPass">Придумайте пароль (от 4 знаков) *</label>
+                        <label for="unifiedRegPass" data-i18n="authPassCreate">Придумайте пароль (от 4 знаков) *</label>
                         <input type="password" id="unifiedRegPass" placeholder="••••••••" required minlength="4" autocomplete="new-password">
                     </div>
 
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.25rem; gap:0.5rem;">
-                        <button class="btn btn-outline" type="button" onclick="app.closeAuthModal()">Отмена</button>
-                        <button class="btn btn-primary" type="submit" style="flex:1;">Зарегистрироваться</button>
+                        <button class="btn btn-outline" type="button" onclick="app.closeAuthModal()" data-i18n="authCancel">Отмена</button>
+                        <button class="btn btn-primary" type="submit" style="flex:1;" data-i18n="authSubmitReg">Зарегистрироваться</button>
                     </div>
 
                     <div style="margin-top:1rem; text-align:center;">
-                        <span class="text-muted" style="font-size:0.8rem;">Уже зарегистрированы? </span>
-                        <button type="button" onclick="app.switchAuthTab('login')" style="font-size:0.82rem; font-weight:600; color:var(--primary); background:none; border:none; cursor:pointer; padding:0;">Войти в свой кабинет</button>
+                        <span class="text-muted" style="font-size:0.8rem;" data-i18n="authAlreadyReg">Уже зарегистрированы? </span>
+                        <button type="button" onclick="app.switchAuthTab('login')" style="font-size:0.82rem; font-weight:600; color:var(--primary); background:none; border:none; cursor:pointer; padding:0;" data-i18n="authGoLogin">Войти в свой кабинет</button>
+                    </div>
+                </form>
+
+                <!-- ФОРМА 3: ВОССТАНОВЛЕНИЕ ПАРОЛЯ ПО SMS (С МОМЕНТАЛЬНЫМ ВВОДОМ НОВОГО ПАРОЛЯ) -->
+                <form id="unifiedForgotForm" onsubmit="app.submitForgotNewPassword(event)" style="display:none; margin-top: 1rem;">
+                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem;" id="forgotModalTitle" data-i18n="forgotTitle">Восстановление пароля</h3>
+                    <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;" id="forgotModalDesc" data-i18n="forgotDesc">Введите ваш номер телефона для получения SMS-кода подтверждения.</p>
+
+                    <!-- Шаг 1: Номер телефона и получение SMS-кода -->
+                    <div class="form-group" style="margin-top: 0.75rem;">
+                        <label for="forgotPhone" id="labelForgotPhone" data-i18n="authPhone">Номер телефона *</label>
+                        <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
+                            <input type="tel" id="forgotPhone" placeholder="+7 (701) 000-00-00" required maxlength="25" style="flex:1;" autocomplete="tel">
+                            <button class="btn btn-outline" type="button" id="btnSendForgotCode" onclick="app.sendForgotCode()" style="white-space:nowrap; font-size:0.82rem; padding:0.4rem 0.65rem;" data-i18n="authGetCode">
+                                📲 Получить код
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Шаг 2: Ввод проверочного SMS-кода -->
+                    <div id="forgotCodeContainer" style="display:none; background:var(--bg-page); padding:0.85rem; border-radius:var(--radius); border:1px solid var(--border); margin-top:0.75rem;">
+                        <label for="forgotSmsCode" style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem;" data-i18n="authCodeLabel">Код из SMS-сообщения (4 цифры):</label>
+                        <div style="display:flex; gap:0.5rem;">
+                            <input type="text" id="forgotSmsCode" placeholder="0000" maxlength="6" inputmode="numeric" style="flex:1; font-size:1.15rem; letter-spacing:3px; font-weight:700; text-align:center;">
+                            <button class="btn btn-success" type="button" id="btnVerifyForgotCode" onclick="app.confirmForgotCode()" style="white-space:nowrap;" data-i18n="authVerifyCode">Подтвердить</button>
+                        </div>
+                        <div id="forgotVerificationStatus" style="margin-top:0.5rem;"></div>
+                    </div>
+
+                    <!-- Шаг 3: Моментальный ввод нового пароля (активируется сразу после подтверждения SMS) -->
+                    <div id="forgotNewPassBlock" style="display:none; margin-top:1rem; border-top:1px dashed var(--border); padding-top:1rem;">
+                        <div class="form-group">
+                            <label for="forgotNewPass" id="labelForgotNewPass" data-i18n="forgotNewPassLabel">Придумайте новый пароль (от 4 знаков) *</label>
+                            <input type="password" id="forgotNewPass" placeholder="••••••••" minlength="4" autocomplete="new-password">
+                        </div>
+                        <div class="form-group" style="margin-top:0.75rem;">
+                            <label for="forgotNewPassRepeat" id="labelForgotNewPassRepeat" data-i18n="forgotNewPassRepeat">Повторите новый пароль *</label>
+                            <input type="password" id="forgotNewPassRepeat" placeholder="••••••••" minlength="4" autocomplete="new-password">
+                        </div>
+                        <div style="margin-top:1.25rem;">
+                            <button class="btn btn-primary" type="submit" id="btnSubmitNewPass" style="width:100%;" data-i18n="forgotSaveBtn">💾 Сохранить новый пароль и войти</button>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.25rem; gap:0.5rem;">
+                        <button class="btn btn-outline" type="button" onclick="app.switchAuthTab('login')" id="btnForgotBack" data-i18n="forgotBackBtn">← Назад ко входу</button>
+                        <button class="btn btn-outline" type="button" onclick="app.closeAuthModal()" id="btnForgotCancel" data-i18n="authCancel">Отмена</button>
                     </div>
                 </form>
             </div>

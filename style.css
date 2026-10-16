@@ -1634,6 +1634,63 @@ input:focus, select:focus {
 [data-theme="dark"] .staff-badge.admin { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
 [data-theme="dark"] .staff-badge.worker { background: rgba(14, 165, 233, 0.2); color: #7dd3fc; }
 
+/* ==================== ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКОВ (I18N) ==================== */
+.lang-switcher {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    padding: 3px;
+    gap: 3px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.lang-btn {
+    border: none;
+    background: transparent;
+    padding: 4px 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1;
+    user-select: none;
+}
+
+.lang-btn:hover {
+    color: var(--text-main);
+}
+
+.lang-btn.active {
+    background: var(--primary);
+    color: #ffffff !important;
+    box-shadow: 0 1px 4px rgba(37, 99, 235, 0.35);
+}
+
+[data-theme="dark"] .lang-switcher {
+    background: rgba(15, 23, 42, 0.75);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ==================== КАРТОЧКА АВТОРИЗАЦИОННОГО ШЛЮЗА ==================== */
+.auth-gate-card {
+    text-align: center;
+    padding: 2.5rem 1.25rem;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.07), rgba(14, 165, 233, 0.07));
+    border: 2px dashed rgba(37, 99, 235, 0.35);
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .auth-gate-card {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(14, 165, 233, 0.1));
+    border-color: rgba(56, 189, 248, 0.3);
+}
+
 /* ==================== АДАПТИВНОСТЬ ДЛЯ СМАРТФОНОВ (MOBILE OPTIMIZATION) ==================== */
 @media (max-width: 768px) {
     body {
