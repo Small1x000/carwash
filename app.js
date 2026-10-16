@@ -1641,7 +1641,7 @@ class CarWashApp {
 
     // ==================== ПРОВЕРКА НОМЕРА ТЕЛЕФОНА И SMS-КОД ====================
 
-    sendVerificationCode() {
+    async sendVerificationCode() {
         const phoneInput = document.getElementById('unifiedRegPhone');
         if (!phoneInput) return;
         const rawPhone = phoneInput.value.trim();
@@ -1667,7 +1667,7 @@ class CarWashApp {
         this.smsVerification = {
             phone: last10,
             code: code,
-            expiresAt: Date.now() + 180000,
+            expiresAt: Date.now() + 300000,
             verified: false
         };
 
@@ -1675,10 +1675,7 @@ class CarWashApp {
         if (container) container.style.display = 'block';
 
         const statusEl = document.getElementById('codeVerificationStatus');
-        if (statusEl) {
-            statusEl.innerHTML = `<span style="color:var(--primary); font-size:0.85rem;">${this.t('smsDispatchedToPhone', '📲 SMS с 4-значным кодом подтверждения отправлено на номер {phone}. Проверьте сообщения на мобильном телефоне.', { phone: this.formatPhoneNumber(rawPhone) })}</span>`;
-        }
-
+        const helpEl = document.getElementById('codeHelpLinks');
         const codeInput = document.getElementById('unifiedRegCode');
         if (codeInput) {
             codeInput.value = '';
@@ -1689,8 +1686,64 @@ class CarWashApp {
         const verifyBtn = document.getElementById('btnVerifyCode');
         if (verifyBtn) verifyBtn.style.display = 'inline-block';
 
-        this.showSmsNotification(code, this.formatPhoneNumber(rawPhone));
-        alert(this.t('smsDispatchedToPhone', '📲 SMS с 4-значным кодом подтверждения отправлено на номер {phone}. Проверьте сообщения на мобильном телефоне.', { phone: this.formatPhoneNumber(rawPhone) }));
+        if (statusEl) {
+            statusEl.innerHTML = `<span style="color:var(--primary); font-size:0.85rem;">⏳ Отправка проверочного SMS на номер ${this.formatPhoneNumber(rawPhone)}...</span>`;
+        }
+
+        const res = await this.sendRealSms(rawPhone, code, 'registration');
+
+        if (res && res.success) {
+            if (res.confirmationResult) {
+                this.firebaseConfirmationResult = res.confirmationResult;
+            }
+            if (statusEl) {
+                statusEl.innerHTML = `<span style="color:#059669; font-weight:700; font-size:0.85rem;">📲 Реальное SMS с кодом отправлено на ваш телефон ${this.formatPhoneNumber(rawPhone)}! Введите полученный код ниже:</span>`;
+            }
+            if (helpEl) helpEl.innerHTML = '';
+            alert(`📲 Реальное SMS с проверочным кодом отправлено на номер ${this.formatPhoneNumber(rawPhone)}! Пожалуйста, проверьте входящие SMS на вашем телефоне.`);
+        } else {
+            console.warn('[SMS Dispatch Result]', res);
+            let errMsg = '';
+            if (res.reason === 'api_key_missing') {
+                errMsg = `⚠️ Для отправки реальных SMS от Google на ваш телефон, владелец должен вставить Firebase Web API Key в Настройках.`;
+            } else if (res.reason === 'firebase_error') {
+                const fbCode = (res.error && res.error.code) || '';
+                if (fbCode === 'auth/operation-not-allowed') {
+                    errMsg = `⚠️ В консоли Firebase еще не включен провайдер "Phone" (раздел Authentication -> Sign-in method -> Phone).`;
+                } else if (fbCode === 'auth/invalid-phone-number') {
+                    errMsg = `❌ Неверный формат номера телефона. Введите номер мобильного в формате Казахстана (+7 701...).`;
+                } else {
+                    errMsg = `⚠️ Ошибка отправки SMS: ${res.error && res.error.message ? res.error.message : 'Проверьте доступность номера'}`;
+                }
+            } else if (res.reason === 'not_configured') {
+                errMsg = `⚠️ SMS-шлюз еще не подключен в Настройках владельца.`;
+            } else {
+                errMsg = `⚠️ Ошибка отправки SMS (${res.reason || 'шлюз недоступен'}).`;
+            }
+
+            if (statusEl) {
+                statusEl.innerHTML = `<div style="color:#b45309; background:#fffbeb; border:1px solid #fde68a; padding:0.5rem 0.75rem; border-radius:6px; font-size:0.82rem; margin-top:0.35rem;">
+                    ${errMsg}
+                    <div style="margin-top:0.35rem; font-weight:600; color:#334155;">
+                        💡 Резервный проверочный код для регистрации: <strong style="color:var(--primary); font-size:1.05rem; letter-spacing:2px;">${code}</strong>
+                    </div>
+                </div>`;
+            }
+
+            if (helpEl) {
+                helpEl.innerHTML = `
+                    <div style="margin-top:0.4rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="app.sendCodeViaWhatsapp('${rawPhone}', '${code}')" style="font-size:0.78rem;">
+                            💬 Проверить номер через WhatsApp
+                        </button>
+                    </div>
+                `;
+            }
+
+            if (codeInput) {
+                codeInput.placeholder = code;
+            }
+        }
 
         const sendBtn = document.getElementById('btnSendSmsCode');
         if (sendBtn) {
@@ -1711,7 +1764,7 @@ class CarWashApp {
         }
     }
 
-    confirmVerificationCode() {
+    async confirmVerificationCode() {
         const codeInput = document.getElementById('unifiedRegCode');
         if (!codeInput) return;
         const val = codeInput.value.trim();
@@ -1726,20 +1779,100 @@ class CarWashApp {
             return;
         }
 
-        if (val === this.smsVerification.code) {
+        let verified = false;
+
+        // Если SMS было отправлено через Google Firebase Phone Auth
+        if (this.firebaseConfirmationResult) {
+            try {
+                await this.firebaseConfirmationResult.confirm(val);
+                verified = true;
+                console.log('[Firebase Phone Auth] Телефон успешно верифицирован Google!');
+            } catch (err) {
+                console.warn('[Firebase Confirm Error]:', err);
+                alert('❌ Неверный проверочный код. Проверьте SMS от Google и повторите ввод.');
+                codeInput.focus();
+                return;
+            }
+        } else {
+            // Проверка локального кода или кода SMS-шлюза
+            if (val === this.smsVerification.code) {
+                verified = true;
+            } else {
+                alert(this.t('codeInvalid', '❌ Неверный проверочный код. Проверьте SMS и повторите ввод.'));
+                codeInput.focus();
+                return;
+            }
+        }
+
+        if (verified) {
             this.smsVerification.verified = true;
             const statusEl = document.getElementById('codeVerificationStatus');
             if (statusEl) {
                 statusEl.innerHTML = `<span style="color:#059669; font-weight:700; font-size:0.85rem;">${this.t('smsCodeVerified', '✅ Номер телефона успешно подтверждён!')}</span>`;
             }
+            const helpEl = document.getElementById('codeHelpLinks');
+            if (helpEl) helpEl.innerHTML = '';
             codeInput.disabled = true;
             const verifyBtn = document.getElementById('btnVerifyCode');
             if (verifyBtn) verifyBtn.style.display = 'none';
             alert(this.t('smsCodeVerified', '✅ Номер подтверждён! Теперь введите пароль и нажмите «Зарегистрироваться».'));
-        } else {
-            alert(this.t('codeInvalid', '❌ Неверный проверочный код. Проверьте SMS и повторите ввод.'));
-            codeInput.focus();
         }
+    }
+
+    initFirebaseAuth() {
+        try {
+            if (typeof firebase === 'undefined') return false;
+            const gw = this.db.smsGateway || {};
+            const apiKey = (gw.firebaseApiKey || (this.db.cloud && this.db.cloud.apiKey) || '').trim();
+            if (!apiKey) return false;
+
+            if (!firebase.apps || !firebase.apps.length) {
+                firebase.initializeApp({
+                    apiKey: apiKey,
+                    authDomain: "carwash-d727e.firebaseapp.com",
+                    projectId: "carwash-d727e",
+                    databaseURL: DEFAULT_FIREBASE_URL
+                });
+            }
+            return true;
+        } catch (e) {
+            console.warn('[Firebase Auth] Init warning:', e);
+            return false;
+        }
+    }
+
+    getRecaptchaVerifier() {
+        if (!this.recaptchaVerifier && typeof firebase !== 'undefined' && firebase.auth) {
+            try {
+                this.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+                    'size': 'invisible',
+                    'callback': (response) => {
+                        console.log('[Firebase Recaptcha] Verified');
+                    },
+                    'expired-callback': () => {
+                        console.warn('[Firebase Recaptcha] Expired');
+                    }
+                });
+                this.recaptchaVerifier.render().catch(err => {
+                    console.warn('[Firebase Recaptcha] Render catch:', err);
+                });
+            } catch (e) {
+                console.warn('[Firebase Recaptcha] Setup warning:', e);
+            }
+        }
+        return this.recaptchaVerifier;
+    }
+
+    sendCodeViaWhatsapp(rawPhone, code) {
+        let cleanDigits = String(rawPhone || '').replace(/\D/g, '');
+        if (cleanDigits.startsWith('8') && cleanDigits.length === 11) {
+            cleanDigits = '7' + cleanDigits.slice(1);
+        } else if (cleanDigits.length === 10) {
+            cleanDigits = '7' + cleanDigits;
+        }
+        const text = encodeURIComponent(`Ваш проверочный код CarWash: ${code}\nДля подтверждения номера +${cleanDigits}`);
+        const url = `https://wa.me/${cleanDigits}?text=${text}`;
+        window.open(url, '_blank');
     }
 
     showSmsNotification(code, formattedPhone, purpose = 'registration') {
@@ -1751,17 +1884,19 @@ class CarWashApp {
     }
 
     async sendRealSms(phone, code, purpose = 'registration') {
-        let cleanPhone = String(phone).replace(/\D/g, '');
-        if (cleanPhone.startsWith('8') && cleanPhone.length === 11) {
-            cleanPhone = '7' + cleanPhone.slice(1);
-        } else if (cleanPhone.length === 10) {
-            cleanPhone = '7' + cleanPhone;
+        let cleanDigits = String(phone).replace(/\D/g, '');
+        if (cleanDigits.startsWith('8') && cleanDigits.length === 11) {
+            cleanDigits = '7' + cleanDigits.slice(1);
+        } else if (cleanDigits.length === 10) {
+            cleanDigits = '7' + cleanDigits;
         }
+        const e164 = '+' + cleanDigits;
 
-        const gw = this.db.smsGateway || {};
+        const gw = this.db.smsGateway || { provider: 'firebase' };
+        const provider = gw.provider || 'firebase';
         const siteName = 'CarWash Tracker';
-        let msgText = '';
 
+        let msgText = '';
         if (purpose === 'recovery') {
             msgText = `${code} — код для сброса пароля в ${siteName}. Не сообщайте его никому.`;
         } else if (purpose === 'test') {
@@ -1770,56 +1905,78 @@ class CarWashApp {
             msgText = `${code} — ваш проверочный код в ${siteName}.`;
         }
 
-        console.log(`[SMS Gateway Dispatch] To: +${cleanPhone}, Provider: ${gw.provider || 'none'}`);
+        console.log(`[SMS Gateway Dispatch] Provider: ${provider}, Phone: ${e164}`);
 
-        if (gw && gw.provider === 'smsc' && gw.login && gw.password) {
+        // 1. Google Firebase Phone Authentication (Реальные SMS от Google на сотовые телефоны)
+        if (provider === 'firebase') {
+            const hasFirebaseApp = this.initFirebaseAuth();
+            if (!hasFirebaseApp) {
+                console.warn('[Firebase Phone Auth] Firebase Web API Key не указан в Настройках.');
+                return { success: false, reason: 'api_key_missing' };
+            }
+
             try {
-                let url = `https://smsc.kz/sys/send.php?login=${encodeURIComponent(gw.login)}&psw=${encodeURIComponent(gw.password)}&phones=${encodeURIComponent(cleanPhone)}&mes=${encodeURIComponent(msgText)}&fmt=3`;
-                if (gw.sender) {
-                    url += `&sender=${encodeURIComponent(gw.sender)}`;
+                const appVerifier = this.getRecaptchaVerifier();
+                if (!appVerifier) {
+                    return { success: false, reason: 'recaptcha_failed' };
                 }
+                const confirmationResult = await firebase.auth().signInWithPhoneNumber(e164, appVerifier);
+                return { success: true, provider: 'firebase', confirmationResult: confirmationResult };
+            } catch (err) {
+                console.error('[Firebase Phone Auth Error]:', err);
+                if (window.grecaptcha && this.recaptchaVerifier) {
+                    try {
+                        this.recaptchaVerifier.render().then(wId => grecaptcha.reset(wId));
+                    } catch (e) {}
+                }
+                return { success: false, reason: 'firebase_error', error: err };
+            }
+        }
+
+        // 2. SMSC.kz
+        if (provider === 'smsc' && gw.login && gw.password) {
+            try {
+                let url = `https://smsc.kz/sys/send.php?login=${encodeURIComponent(gw.login)}&psw=${encodeURIComponent(gw.password)}&phones=${encodeURIComponent(cleanDigits)}&mes=${encodeURIComponent(msgText)}&fmt=3`;
+                if (gw.sender) url += `&sender=${encodeURIComponent(gw.sender)}`;
                 await fetch(url, { mode: 'no-cors' });
                 try {
                     const img = new Image();
                     img.src = url;
                 } catch (e) {}
-                console.log('[SMS Gateway] SMSC.kz request sent successfully.');
                 return { success: true, provider: 'smsc' };
             } catch (err) {
                 console.warn('[SMS Gateway] SMSC error:', err);
-                try {
-                    const img = new Image();
-                    img.src = `https://smsc.kz/sys/send.php?login=${encodeURIComponent(gw.login)}&psw=${encodeURIComponent(gw.password)}&phones=${encodeURIComponent(cleanPhone)}&mes=${encodeURIComponent(msgText)}&fmt=3`;
-                } catch (e) {}
-                return { success: true, provider: 'smsc-fallback' };
+                return { success: false, reason: 'network_error', error: err };
             }
-        } else if (gw && gw.provider === 'mobizon' && (gw.password || gw.apiKey)) {
+        }
+
+        // 3. Mobizon.kz
+        if (provider === 'mobizon' && (gw.password || gw.apiKey)) {
             const key = gw.password || gw.apiKey;
             try {
-                const url = `https://api.mobizon.kz/service/message/sendsmsmessage?recipient=${encodeURIComponent(cleanPhone)}&text=${encodeURIComponent(msgText)}&apiKey=${encodeURIComponent(key)}`;
+                const url = `https://api.mobizon.kz/service/message/sendsmsmessage?recipient=${encodeURIComponent(cleanDigits)}&text=${encodeURIComponent(msgText)}&apiKey=${encodeURIComponent(key)}`;
                 await fetch(url, { mode: 'no-cors' });
-                console.log('[SMS Gateway] Mobizon request sent successfully.');
                 return { success: true, provider: 'mobizon' };
             } catch (err) {
-                console.warn('[SMS Gateway] Mobizon error:', err);
-                return { success: false, error: err };
+                return { success: false, reason: 'mobizon_error', error: err };
             }
-        } else if (gw && gw.provider === 'webhook' && gw.webhookUrl) {
+        }
+
+        // 4. Webhook
+        if (provider === 'webhook' && gw.webhookUrl) {
             try {
                 await fetch(gw.webhookUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone: cleanPhone, code: code, message: msgText, purpose: purpose })
+                    body: JSON.stringify({ phone: cleanDigits, code: code, message: msgText, purpose: purpose })
                 });
                 return { success: true, provider: 'webhook' };
             } catch (err) {
-                console.warn('[SMS Gateway] Webhook error:', err);
-                return { success: false, error: err };
+                return { success: false, reason: 'webhook_error', error: err };
             }
-        } else {
-            console.info(`[SMS Gateway Note] SMS шлюз еще не настроен владельцем в Настройках. Проверочный код для +${cleanPhone}: ${code}`);
-            return { success: false, reason: 'not_configured' };
         }
+
+        return { success: false, reason: 'not_configured' };
     }
 
     hideSmsNotification() {
@@ -1860,7 +2017,7 @@ class CarWashApp {
 
     // ==================== ВОССТАНОВЛЕНИЕ ПАРОЛЯ ПО SMS ====================
 
-    sendForgotCode() {
+    async sendForgotCode() {
         const phoneInput = document.getElementById('forgotPhone');
         if (!phoneInput) return;
         const rawPhone = phoneInput.value.trim();
@@ -1907,7 +2064,7 @@ class CarWashApp {
             phone: last10,
             rawPhone: rawPhone,
             code: code,
-            expiresAt: Date.now() + 180000,
+            expiresAt: Date.now() + 300000,
             verified: false,
             userType: userType,
             targetRecord: targetRecord
@@ -1917,8 +2074,9 @@ class CarWashApp {
         if (codeContainer) codeContainer.style.display = 'block';
 
         const statusEl = document.getElementById('forgotVerificationStatus');
+        const helpEl = document.getElementById('forgotHelpLinks');
         if (statusEl) {
-            statusEl.innerHTML = `<span style="color:var(--primary); font-size:0.85rem;">${this.t('smsDispatchedToPhone', '📲 SMS с 4-значным кодом подтверждения отправлено на номер {phone}. Проверьте сообщения на мобильном телефоне.', { phone: this.formatPhoneNumber(rawPhone) })}</span>`;
+            statusEl.innerHTML = `<span style="color:var(--primary); font-size:0.85rem;">⏳ Отправка проверочного SMS на ${this.formatPhoneNumber(rawPhone)}...</span>`;
         }
 
         const codeInput = document.getElementById('forgotSmsCode');
@@ -1934,8 +2092,62 @@ class CarWashApp {
         const newPassBlock = document.getElementById('forgotNewPassBlock');
         if (newPassBlock) newPassBlock.style.display = 'none';
 
-        this.showSmsNotification(code, this.formatPhoneNumber(rawPhone), 'recovery');
-        alert(this.t('smsDispatchedToPhone', '📲 SMS с 4-значным кодом подтверждения отправлено на номер {phone}. Проверьте сообщения на мобильном телефоне.', { phone: this.formatPhoneNumber(rawPhone) }));
+        // Отправка реального SMS через Firebase / SMS-шлюз
+        this.firebaseForgotConfirmationResult = null;
+        const res = await this.sendRealSms(rawPhone, code, 'recovery');
+
+        if (res && res.success) {
+            if (res.provider === 'firebase' && res.confirmationResult) {
+                this.firebaseForgotConfirmationResult = res.confirmationResult;
+            }
+            if (statusEl) {
+                statusEl.innerHTML = `<span style="color:#059669; font-weight:700; font-size:0.85rem;">📲 Реальное SMS с кодом отправлено на ваш телефон ${this.formatPhoneNumber(rawPhone)}! Введите полученный код ниже:</span>`;
+            }
+            if (helpEl) helpEl.innerHTML = '';
+            alert(`📲 Реальное SMS с проверочным кодом отправлено на номер ${this.formatPhoneNumber(rawPhone)}! Пожалуйста, проверьте входящие SMS на вашем телефоне.`);
+        } else {
+            console.warn('[SMS Forgot Dispatch Result]', res);
+            let errMsg = '';
+            if (res.reason === 'api_key_missing') {
+                errMsg = `⚠️ Для отправки реальных SMS от Google на ваш телефон, владелец должен вставить Firebase Web API Key в Настройках.`;
+            } else if (res.reason === 'firebase_error') {
+                const fbCode = (res.error && res.error.code) || '';
+                if (fbCode === 'auth/operation-not-allowed') {
+                    errMsg = `⚠️ В консоли Firebase еще не включен провайдер "Phone" (раздел Authentication -> Sign-in method -> Phone).`;
+                } else if (fbCode === 'auth/invalid-phone-number') {
+                    errMsg = `❌ Неверный формат номера телефона. Введите номер мобильного в формате Казахстана (+7 701...).`;
+                } else {
+                    errMsg = `⚠️ Ошибка отправки SMS: ${res.error && res.error.message ? res.error.message : 'Проверьте доступность номера'}`;
+                }
+            } else if (res.reason === 'not_configured') {
+                errMsg = `⚠️ SMS-шлюз еще не подключен в Настройках владельца.`;
+            } else {
+                errMsg = `⚠️ Ошибка отправки SMS (${res.reason || 'шлюз недоступен'}).`;
+            }
+
+            if (statusEl) {
+                statusEl.innerHTML = `<div style="color:#b45309; background:#fffbeb; border:1px solid #fde68a; padding:0.5rem 0.75rem; border-radius:6px; font-size:0.82rem; margin-top:0.35rem;">
+                    ${errMsg}
+                    <div style="margin-top:0.35rem; font-weight:600; color:#334155;">
+                        💡 Резервный проверочный код для восстановления: <strong style="color:var(--primary); font-size:1.05rem; letter-spacing:2px;">${code}</strong>
+                    </div>
+                </div>`;
+            }
+
+            if (helpEl) {
+                helpEl.innerHTML = `
+                    <div style="margin-top:0.4rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="app.sendCodeViaWhatsapp('${rawPhone}', '${code}')" style="font-size:0.78rem;">
+                            💬 Проверить номер через WhatsApp
+                        </button>
+                    </div>
+                `;
+            }
+
+            if (codeInput) {
+                codeInput.placeholder = code;
+            }
+        }
 
         const sendBtn = document.getElementById('btnSendForgotCode');
         if (sendBtn) {
@@ -1956,7 +2168,7 @@ class CarWashApp {
         }
     }
 
-    confirmForgotCode() {
+    async confirmForgotCode() {
         const codeInput = document.getElementById('forgotSmsCode');
         if (!codeInput) return;
         const val = codeInput.value.trim();
@@ -1971,12 +2183,38 @@ class CarWashApp {
             return;
         }
 
-        if (val === this.forgotSms.code) {
+        let verified = false;
+
+        // Если SMS было отправлено через Google Firebase Phone Auth
+        if (this.firebaseForgotConfirmationResult) {
+            try {
+                await this.firebaseForgotConfirmationResult.confirm(val);
+                verified = true;
+                console.log('[Firebase Phone Auth] Телефон восстановления успешно верифицирован Google!');
+            } catch (err) {
+                console.warn('[Firebase Forgot Confirm Error]:', err);
+                alert('❌ Неверный проверочный код. Проверьте SMS от Google и повторите ввод.');
+                codeInput.focus();
+                return;
+            }
+        } else {
+            if (val === this.forgotSms.code) {
+                verified = true;
+            } else {
+                alert(this.t('codeInvalid', '❌ Неверный проверочный код. Проверьте код в SMS и повторите ввод.'));
+                codeInput.focus();
+                return;
+            }
+        }
+
+        if (verified) {
             this.forgotSms.verified = true;
             const statusEl = document.getElementById('forgotVerificationStatus');
             if (statusEl) {
                 statusEl.innerHTML = `<span style="color:#059669; font-weight:700; font-size:0.85rem;">${this.t('smsCodeVerified', '✅ Номер телефона успешно подтверждён!')}</span>`;
             }
+            const helpEl = document.getElementById('forgotHelpLinks');
+            if (helpEl) helpEl.innerHTML = '';
             codeInput.disabled = true;
             const verifyBtn = document.getElementById('btnVerifyForgotCode');
             if (verifyBtn) verifyBtn.style.display = 'none';
@@ -1990,9 +2228,6 @@ class CarWashApp {
             if (newPassInput) newPassInput.focus();
 
             alert(this.t('smsEnterNewPassPrompt', '✅ Номер подтверждён! Теперь введите новый пароль ниже.'));
-        } else {
-            alert(this.t('codeInvalid', '❌ Неверный проверочный код. Проверьте код в SMS и повторите ввод.'));
-            codeInput.focus();
         }
     }
 
@@ -4931,10 +5166,12 @@ class CarWashApp {
         // Заполнение настроек SMS-шлюза
         const gw = this.db.smsGateway || {};
         const smsProv = document.getElementById('smsProviderSelect');
+        const smsFbKey = document.getElementById('smsFirebaseApiKeyInput');
         const smsLogin = document.getElementById('smsLoginInput');
         const smsPass = document.getElementById('smsPasswordInput');
         const smsSender = document.getElementById('smsSenderInput');
-        if (smsProv) smsProv.value = gw.provider || 'smsc';
+        if (smsProv) smsProv.value = gw.provider || 'firebase';
+        if (smsFbKey) smsFbKey.value = gw.firebaseApiKey || (this.db.cloud && this.db.cloud.apiKey) || '';
         if (smsLogin) smsLogin.value = gw.login || '';
         if (smsPass) smsPass.value = gw.password || gw.apiKey || '';
         if (smsSender) smsSender.value = gw.sender || '';
@@ -4949,31 +5186,75 @@ class CarWashApp {
         if (!provEl) return;
         const val = provEl.value;
 
+        const fbGrp = document.getElementById('smsFirebaseGroup');
         const loginGrp = document.getElementById('smsLoginGroup');
         const loginLabel = document.getElementById('smsLoginLabel');
         const loginInput = document.getElementById('smsLoginInput');
+        const passGrp = document.getElementById('smsPassGroup');
         const passLabel = document.getElementById('smsPassLabel');
         const passInput = document.getElementById('smsPasswordInput');
+        const senderGrp = document.getElementById('smsSenderGroup');
+        const helpEl = document.getElementById('smsProviderHelpText');
         const badge = document.getElementById('smsGatewayStatusBadge');
 
         if (badge) {
-            badge.textContent = val === 'smsc' ? 'SMSC.kz' : (val === 'mobizon' ? 'Mobizon.kz' : 'Webhook');
+            badge.textContent = val === 'firebase' ? 'Google Firebase' : (val === 'smsc' ? 'SMSC.kz' : (val === 'mobizon' ? 'Mobizon.kz' : 'Webhook'));
         }
 
-        if (val === 'smsc') {
+        if (val === 'firebase') {
+            if (fbGrp) fbGrp.style.display = 'block';
+            if (loginGrp) loginGrp.style.display = 'none';
+            if (passGrp) passGrp.style.display = 'none';
+            if (senderGrp) senderGrp.style.display = 'none';
+            if (helpEl) {
+                helpEl.innerHTML = `
+                    <strong>🔥 Реальные SMS от Google (10 000 в месяц БЕСПЛАТНО):</strong>
+                    <ol style="margin:0.35rem 0 0 1.25rem; padding:0; line-height:1.4;">
+                        <li>Откройте <a href="https://console.firebase.google.com/project/carwash-d727e/authentication" target="_blank" rel="noopener" style="color:var(--primary); font-weight:600;">консоль Firebase (Authentication)</a> -> вкладка <strong>Sign-in method</strong> -> включите <strong>«Phone»</strong>.</li>
+                        <li>Во вкладке <strong>Settings</strong> -> <strong>Authorized domains</strong> добавьте домен <code>small1x000.github.io</code>.</li>
+                        <li>Откройте Настройки проекта (Project settings) -> скопируйте <strong>Web API Key</strong> и вставьте в поле выше.</li>
+                    </ol>
+                    После этого Google будет сам бесплатно отправлять реальные SMS на любые сотовые телефоны Казахстана (+7...) с проверкой существования номера!
+                `;
+            }
+        } else if (val === 'smsc') {
+            if (fbGrp) fbGrp.style.display = 'none';
             if (loginGrp) loginGrp.style.display = 'block';
+            if (passGrp) passGrp.style.display = 'block';
+            if (senderGrp) senderGrp.style.display = 'block';
             if (loginLabel) loginLabel.textContent = this.t('smsLoginLabel', 'Логин в SMSC.kz *');
             if (loginInput) loginInput.placeholder = 'Ваш логин в smsc.kz';
             if (passLabel) passLabel.textContent = this.t('smsPassLabel', 'Пароль в SMSC.kz *');
             if (passInput) passInput.placeholder = 'Пароль от smsc.kz';
+            if (helpEl) {
+                helpEl.innerHTML = `
+                    <strong>Подключение SMSC.kz:</strong> Зарегистрируйтесь на <a href="https://smsc.kz" target="_blank" style="color:var(--primary);">smsc.kz</a>, укажите логин и пароль от кабинета. Сообщения тарифицируются по ценам операторов РК.
+                `;
+            }
         } else if (val === 'mobizon') {
+            if (fbGrp) fbGrp.style.display = 'none';
             if (loginGrp) loginGrp.style.display = 'none';
+            if (passGrp) passGrp.style.display = 'block';
+            if (senderGrp) senderGrp.style.display = 'block';
             if (passLabel) passLabel.textContent = 'Mobizon API Key *';
             if (passInput) passInput.placeholder = 'API-ключ из личного кабинета mobizon.kz';
+            if (helpEl) {
+                helpEl.innerHTML = `
+                    <strong>Подключение Mobizon.kz:</strong> Зарегистрируйтесь на <a href="https://mobizon.kz" target="_blank" style="color:var(--primary);">mobizon.kz</a>, скопируйте API-ключ в настройках профиля.
+                `;
+            }
         } else if (val === 'webhook') {
+            if (fbGrp) fbGrp.style.display = 'none';
             if (loginGrp) loginGrp.style.display = 'none';
+            if (passGrp) passGrp.style.display = 'block';
+            if (senderGrp) senderGrp.style.display = 'none';
             if (passLabel) passLabel.textContent = 'Webhook URL *';
             if (passInput) passInput.placeholder = 'https://your-server.com/sms-endpoint';
+            if (helpEl) {
+                helpEl.innerHTML = `
+                    <strong>Кастомный шлюз (Webhook):</strong> При отправке кода будет отправлен POST-запрос с JSON: <code>{"phone":"77011234567","code":"1234","message":"...","purpose":"..."}</code>.
+                `;
+            }
         }
     }
 
@@ -4985,19 +5266,27 @@ class CarWashApp {
         }
 
         const prov = document.getElementById('smsProviderSelect').value;
-        const login = (document.getElementById('smsLoginInput').value || '').trim();
-        const pass = (document.getElementById('smsPasswordInput').value || '').trim();
-        const sender = (document.getElementById('smsSenderInput').value || '').trim();
+        const fbKey = (document.getElementById('smsFirebaseApiKeyInput')?.value || '').trim();
+        const login = (document.getElementById('smsLoginInput')?.value || '').trim();
+        const pass = (document.getElementById('smsPasswordInput')?.value || '').trim();
+        const sender = (document.getElementById('smsSenderInput')?.value || '').trim();
 
         this.db.smsGateway = {
             provider: prov,
+            firebaseApiKey: fbKey,
             login: login,
             password: pass,
-            apiKey: pass,
+            apiKey: prov === 'firebase' ? fbKey : pass,
             webhookUrl: prov === 'webhook' ? pass : '',
             sender: sender,
             updatedAt: new Date().toISOString()
         };
+
+        if (prov === 'firebase' && fbKey) {
+            if (!this.db.cloud) this.db.cloud = {};
+            this.db.cloud.apiKey = fbKey;
+            this.initFirebaseAuth();
+        }
 
         this.saveDatabase();
         alert('✅ Настройки SMS-шлюза успешно сохранены и синхронизированы!');
@@ -5013,26 +5302,40 @@ class CarWashApp {
             return;
         }
 
-        const gw = this.db.smsGateway;
-        if (!gw || (!gw.password && !gw.apiKey)) {
+        const gw = this.db.smsGateway || {};
+        const prov = gw.provider || 'firebase';
+
+        if (prov === 'firebase') {
+            const hasKey = (gw.firebaseApiKey || (this.db.cloud && this.db.cloud.apiKey) || '').trim();
+            if (!hasKey) {
+                alert('Пожалуйста, сначала введите и сохраните Firebase Web API Key!');
+                return;
+            }
+        } else if (!gw.password && !gw.apiKey) {
             alert('Пожалуйста, сначала сохраните логин и пароль/ключ SMS-шлюза!');
             return;
         }
 
         const testRes = document.getElementById('smsTestResult');
         if (testRes) {
-            testRes.innerHTML = `<span style="color:var(--primary);">⏳ Отправка тестового SMS...</span>`;
+            testRes.innerHTML = `<span style="color:var(--primary);">⏳ Отправка реального тестового SMS...</span>`;
         }
 
         const ownerPhone = this.currentUserPhone || '7765231041';
         const res = await this.sendRealSms(ownerPhone, '7777', 'test');
         if (testRes) {
             if (res && res.success) {
-                testRes.innerHTML = `<span style="color:#059669;">✅ Тестовое SMS отправлено на +${ownerPhone.replace(/\D/g, '')}!</span>`;
-                alert(`✅ Запрос на отправку тестового SMS отправлен на номер +${ownerPhone.replace(/\D/g, '')}! Проверьте ваш телефон.`);
+                testRes.innerHTML = `<span style="color:#059669;">✅ Реальное SMS успешно отправлено на +${ownerPhone.replace(/\D/g, '')}!</span>`;
+                alert(`✅ Реальное SMS с проверочным кодом отправлено на номер +${ownerPhone.replace(/\D/g, '')}! Проверьте ваш телефон.`);
             } else {
-                testRes.innerHTML = `<span style="color:#ef4444;">❌ Ошибка отправки SMS: ${res.reason || res.error || 'Проверьте данные шлюза'}</span>`;
-                alert(`⚠️ Не удалось отправить SMS: ${res.reason || res.error || 'Проверьте баланс и логин/пароль на SMSC.kz'}`);
+                let errText = res.reason || (res.error && res.error.message) || 'Проверьте данные шлюза';
+                if (res.reason === 'api_key_missing') errText = 'Не указан Firebase Web API Key';
+                if (res.reason === 'recaptcha_failed') errText = 'Ошибка проверки Google reCAPTCHA';
+                if (res.reason === 'firebase_error' && res.error && res.error.code === 'auth/operation-not-allowed') {
+                    errText = 'В Firebase Console не включен провайдер "Phone"';
+                }
+                testRes.innerHTML = `<span style="color:#ef4444;">❌ Ошибка отправки SMS: ${errText}</span>`;
+                alert(`⚠️ Не удалось отправить SMS: ${errText}`);
             }
         }
     }

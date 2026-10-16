@@ -844,23 +844,38 @@
                             <div class="form-group">
                                 <label for="smsProviderSelect" data-i18n="smsProviderLabel">SMS Провайдер *</label>
                                 <select id="smsProviderSelect" onchange="app.onSmsProviderChange()" required>
-                                    <option value="smsc">SMSC.kz (СМС-Центр Казахстан — рекомендуется)</option>
+                                    <option value="firebase" selected>Google Firebase Phone Auth (10 000 бесплатных реальных SMS от Google — Рекомендуется)</option>
+                                    <option value="smsc">SMSC.kz (СМС-Центр Казахстан)</option>
                                     <option value="mobizon">Mobizon.kz (API Mobizon)</option>
                                     <option value="webhook">Пользовательский Webhook / Gateway</option>
                                 </select>
                             </div>
-                            <div class="form-group" id="smsLoginGroup">
+                            <div class="form-group" id="smsFirebaseGroup">
+                                <label for="smsFirebaseApiKeyInput" id="smsFirebaseLabel">Firebase Web API Key *</label>
+                                <input type="text" id="smsFirebaseApiKeyInput" placeholder="AIzaSy... из Project Settings в Firebase">
+                            </div>
+                            <div class="form-group" id="smsLoginGroup" style="display:none;">
                                 <label for="smsLoginInput" id="smsLoginLabel" data-i18n="smsLoginLabel">Логин в SMSC.kz *</label>
                                 <input type="text" id="smsLoginInput" placeholder="Ваш логин в smsc.kz" autocomplete="username">
                             </div>
-                            <div class="form-group" id="smsPassGroup">
+                            <div class="form-group" id="smsPassGroup" style="display:none;">
                                 <label for="smsPasswordInput" id="smsPassLabel" data-i18n="smsPassLabel">Пароль / API-ключ *</label>
                                 <input type="password" id="smsPasswordInput" placeholder="Пароль от smsc.kz или API ключ" autocomplete="current-password">
                             </div>
-                            <div class="form-group" id="smsSenderGroup">
+                            <div class="form-group" id="smsSenderGroup" style="display:none;">
                                 <label for="smsSenderInput" data-i18n="smsSenderLabel">Имя отправителя (Sender ID)</label>
                                 <input type="text" id="smsSenderInput" placeholder="CarWash или оставьте пустым" maxlength="15">
                             </div>
+                        </div>
+
+                        <div id="smsProviderHelpText" style="margin-top:0.75rem; font-size:0.82rem; background:var(--bg-page); padding:0.75rem; border-radius:6px; border:1px solid var(--border);">
+                            <strong>🔥 Реальные SMS от Google (10 000 в месяц БЕСПЛАТНО):</strong>
+                            <ol style="margin:0.35rem 0 0 1.25rem; padding:0; line-height:1.4;">
+                                <li>Откройте <a href="https://console.firebase.google.com/project/carwash-d727e/authentication" target="_blank" rel="noopener" style="color:var(--primary); font-weight:600;">консоль Firebase (Authentication)</a> -> вкладка <strong>Sign-in method</strong> -> включите <strong>«Phone»</strong>.</li>
+                                <li>Во вкладке <strong>Settings</strong> -> <strong>Authorized domains</strong> добавьте домен <code>small1x000.github.io</code>.</li>
+                                <li>Откройте Настройки проекта (Project settings) -> скопируйте <strong>Web API Key</strong> и вставьте в поле выше.</li>
+                            </ol>
+                            После этого Google будет сам бесплатно отправлять реальные SMS на любые сотовые телефоны Казахстана (+7...) с проверкой существования номера!
                         </div>
 
                         <div style="margin-top:1rem; display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
@@ -868,9 +883,6 @@
                             <button type="button" class="btn btn-outline" onclick="app.sendTestSms()" data-i18n="smsTestBtn">📲 Отправить тестовое SMS на мой номер</button>
                             <span id="smsTestResult" style="font-size:0.85rem; font-weight:600;"></span>
                         </div>
-                        <small class="text-muted" style="display:block; margin-top:0.75rem;">
-                            💡 Для Казахстана: зарегистрируйтесь на <a href="https://smsc.kz" target="_blank" rel="noopener" style="color:var(--primary); font-weight:600;">smsc.kz</a>, пополните баланс (от 500 тенге) и введите сюда логин и пароль. Все клиенты будут получать реальные SMS с кодом на Beeline, Kcell, Tele2, Altel.
-                        </small>
                     </form>
                 </div>
 
@@ -1016,12 +1028,13 @@
 
                     <!-- Блок ввода проверочного кода -->
                     <div id="smsCodeContainer" style="display:none; background:var(--bg-page); padding:0.85rem; border-radius:var(--radius); border:1px solid var(--border); margin-top:0.75rem;">
-                        <label for="unifiedRegCode" style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem;" data-i18n="authCodeLabel">Код из SMS-сообщения (4 цифры):</label>
+                        <label for="unifiedRegCode" style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem;" data-i18n="authCodeLabel">Код из SMS-сообщения (4-6 цифр):</label>
                         <div style="display:flex; gap:0.5rem;">
-                            <input type="text" id="unifiedRegCode" placeholder="4892" maxlength="6" inputmode="numeric" style="flex:1; font-size:1.15rem; letter-spacing:3px; font-weight:700; text-align:center;">
+                            <input type="text" id="unifiedRegCode" placeholder="123456" maxlength="6" inputmode="numeric" style="flex:1; font-size:1.15rem; letter-spacing:3px; font-weight:700; text-align:center;">
                             <button class="btn btn-success" type="button" id="btnVerifyCode" onclick="app.confirmVerificationCode()" style="white-space:nowrap;" data-i18n="authVerifyCode">Проверить</button>
                         </div>
                         <div id="codeVerificationStatus" style="margin-top:0.5rem;"></div>
+                        <div id="codeHelpLinks" style="margin-top:0.5rem; font-size:0.82rem;"></div>
                     </div>
 
                     <div class="form-group" style="margin-top: 0.75rem;">
@@ -1058,12 +1071,13 @@
 
                     <!-- Шаг 2: Ввод проверочного SMS-кода -->
                     <div id="forgotCodeContainer" style="display:none; background:var(--bg-page); padding:0.85rem; border-radius:var(--radius); border:1px solid var(--border); margin-top:0.75rem;">
-                        <label for="forgotSmsCode" style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem;" data-i18n="authCodeLabel">Код из SMS-сообщения (4 цифры):</label>
+                        <label for="forgotSmsCode" style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem;" data-i18n="authCodeLabel">Код из SMS-сообщения (4-6 цифр):</label>
                         <div style="display:flex; gap:0.5rem;">
-                            <input type="text" id="forgotSmsCode" placeholder="0000" maxlength="6" inputmode="numeric" style="flex:1; font-size:1.15rem; letter-spacing:3px; font-weight:700; text-align:center;">
+                            <input type="text" id="forgotSmsCode" placeholder="123456" maxlength="6" inputmode="numeric" style="flex:1; font-size:1.15rem; letter-spacing:3px; font-weight:700; text-align:center;">
                             <button class="btn btn-success" type="button" id="btnVerifyForgotCode" onclick="app.confirmForgotCode()" style="white-space:nowrap;" data-i18n="authVerifyCode">Подтвердить</button>
                         </div>
                         <div id="forgotVerificationStatus" style="margin-top:0.5rem;"></div>
+                        <div id="forgotHelpLinks" style="margin-top:0.5rem; font-size:0.82rem;"></div>
                     </div>
 
                     <!-- Шаг 3: Моментальный ввод нового пароля (активируется сразу после подтверждения SMS) -->
@@ -1153,6 +1167,13 @@
         </div>
 
     </div>
+
+    <!-- Контейнер для проверки Google reCAPTCHA (для отправки реальных SMS от Google) -->
+    <div id="recaptcha-container"></div>
+
+    <!-- Firebase SDK (v8 Compat для отправки реальных SMS на сотовые телефоны) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
     <!-- Основной скрипт -->
     <script src="app.js"></script>
