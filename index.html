@@ -180,11 +180,11 @@
                                 <div class="form-grid" id="bookingCustomCarFields">
                                     <div class="form-group">
                                         <label for="bookingPlate" data-i18n="bookingPlate">Госномер авто *</label>
-                                        <input type="text" id="bookingPlate" placeholder="например, 777 AAA 01" required maxlength="15" autocomplete="off">
+                                        <input type="text" id="bookingPlate" placeholder="например, 777 AAA 01" data-i18n-placeholder="platePlaceholder" required maxlength="15" autocomplete="off">
                                     </div>
                                     <div class="form-group">
                                         <label for="bookingModel" data-i18n="bookingModel">Марка и модель</label>
-                                        <input type="text" id="bookingModel" placeholder="например, Toyota Camry" autocomplete="off" maxlength="40">
+                                        <input type="text" id="bookingModel" placeholder="например, Toyota Camry" data-i18n-placeholder="modelPlaceholder" autocomplete="off" maxlength="40">
                                     </div>
                                 </div>
 
@@ -214,11 +214,11 @@
                                 <div class="form-grid" style="margin-top: 0.75rem;">
                                     <div class="form-group">
                                         <label for="bookingClientName" data-i18n="bookingName">Ваше имя *</label>
-                                        <input type="text" id="bookingClientName" placeholder="Иван" required maxlength="30">
+                                        <input type="text" id="bookingClientName" placeholder="например, Алихан" data-i18n-placeholder="namePlaceholder" required maxlength="30">
                                     </div>
                                     <div class="form-group">
                                         <label for="bookingClientPhone" data-i18n="bookingPhone">Телефон для связи *</label>
-                                        <input type="tel" id="bookingClientPhone" placeholder="+7 (777) 123-45-67" required maxlength="25">
+                                        <input type="tel" id="bookingClientPhone" placeholder="+7 (701) 000-00-00" data-i18n-placeholder="phonePlaceholder" required maxlength="25">
                                     </div>
                                 </div>
 
@@ -242,8 +242,8 @@
 
                     <!-- Мои активные бронирования -->
                     <div class="card">
-                        <h2>Мои записи и статус</h2>
-                        <p class="text-muted">Здесь отображается статус ваших заявок на бронь в реальном времени:</p>
+                        <h2 data-i18n="bookingMyTitle">Мои записи и статус</h2>
+                        <p class="text-muted" data-i18n="bookingMyDesc">Здесь отображается статус ваших заявок на бронь в реальном времени:</p>
                         
                         <div id="guestBookingsList" class="bookings-stream" style="margin-top: 1rem;">
                             <!-- Карточки броней -->
@@ -256,11 +256,11 @@
             <section id="tab-guestCars" class="tab-content" aria-labelledby="guestCarsTitle">
                 <div class="two-columns">
                     <div class="card">
-                        <h2 id="guestCarsTitle">🚗 Мой гараж</h2>
-                        <p class="text-muted">Сохраните свои автомобили, чтобы бронировать мойку в 1 клик без постоянного ввода госномера.</p>
+                        <h2 id="guestCarsTitle" data-i18n="guestCarsTitle">🚗 Мой гараж</h2>
+                        <p class="text-muted" data-i18n="guestCarsDesc">Сохраните свои автомобили, чтобы бронировать мойку в 1 клик без постоянного ввода госномера.</p>
 
-                        <div id="clientGarageEmpty" class="text-muted" style="text-align: center; padding: 2rem;">
-                            У вас пока нет сохраненных автомобилей. Добавьте свой первый авто справа!
+                        <div id="clientGarageEmpty" class="text-muted" style="text-align: center; padding: 2rem;" data-i18n="garageEmpty">
+                            У вас пока нет сохраненных авто. Добавьте свою первую машину справа!
                         </div>
                         <div id="clientGarageList" class="garage-cards-grid" style="display: none; margin-top: 1rem;">
                             <!-- Автомобили клиента -->
@@ -268,18 +268,18 @@
                     </div>
 
                     <div class="card">
-                        <h3>+ Добавить автомобиль в гараж</h3>
+                        <h3 data-i18n="addCarTitle">+ Добавить автомобиль в гараж</h3>
                         <form id="addCarForm" onsubmit="app.addClientCar(event)" style="margin-top: 1rem;">
                             <div class="form-group" style="margin-bottom: 0.75rem;">
-                                <label for="garagePlate">Госномер *</label>
-                                <input type="text" id="garagePlate" placeholder="например, 777 AAA 01" required maxlength="15" autocomplete="off">
+                                <label for="garagePlate" data-i18n="garagePlate">Госномер *</label>
+                                <input type="text" id="garagePlate" placeholder="например, 777 AAA 01" data-i18n-placeholder="platePlaceholder" required maxlength="15" autocomplete="off">
                             </div>
                             <div class="form-group" style="margin-bottom: 0.75rem;">
-                                <label for="garageModel">Марка и модель *</label>
-                                <input type="text" id="garageModel" placeholder="например, Toyota Camry 70" required maxlength="40">
+                                <label for="garageModel" data-i18n="garageModel">Марка и модель *</label>
+                                <input type="text" id="garageModel" placeholder="например, Toyota Camry 70" data-i18n-placeholder="modelPlaceholder" required maxlength="40">
                             </div>
                             <div class="form-group" style="margin-bottom: 1rem;">
-                                <label for="garageCategory">Класс кузова *</label>
+                                <label for="garageCategory" data-i18n="garageCategory">Класс кузова *</label>
                                 <select id="garageCategory" required>
                                     <option value="sedan">1 класс — Седан / Хэтчбек</option>
                                     <option value="crossover">2 класс — Кроссовер / Универсал</option>
@@ -287,7 +287,7 @@
                                     <option value="minivan">4 класс — Микроавтобус</option>
                                 </select>
                             </div>
-                            <button type="submit" class="btn btn-success">+ Сохранить автомобиль</button>
+                            <button type="submit" class="btn btn-success" data-i18n="saveCarBtn">+ Сохранить автомобиль</button>
                         </form>
                     </div>
                 </div>
@@ -296,12 +296,12 @@
             <!-- Вкладка 3: Быстрый поиск статуса (без входа) -->
             <section id="tab-guestSearch" class="tab-content" aria-labelledby="guestSearchTitle">
                 <div class="card guest-search-card">
-                    <h2 id="guestSearchTitle">Проверка готовности автомобиля</h2>
-                    <p class="text-muted">Введите госномер вашего авто, чтобы узнать статус мойки в реальном времени:</p>
+                    <h2 id="guestSearchTitle" data-i18n="guestSearchTitle">Проверка готовности автомобиля</h2>
+                    <p class="text-muted" data-i18n="guestSearchDesc">Введите госномер вашего авто, чтобы узнать статус мойки в реальном времени:</p>
                     
                     <form class="guest-search-form" onsubmit="app.searchCarStatus(event)">
-                        <input type="text" id="guestSearchPlate" placeholder="например, 777 AAA 01" required autocomplete="off" maxlength="15" aria-label="Госномер автомобиля">
-                        <button type="submit" class="btn btn-primary" id="guestSearchBtn">Проверить</button>
+                        <input type="text" id="guestSearchPlate" placeholder="например, 777 AAA 01" data-i18n-placeholder="platePlaceholder" required autocomplete="off" maxlength="15" aria-label="Госномер автомобиля">
+                        <button type="submit" class="btn btn-primary" id="guestSearchBtn" data-i18n="guestSearchBtn">Проверить</button>
                     </form>
 
                     <div id="guestSearchResult" class="guest-result-box" style="display: none;" role="region" aria-live="polite">
@@ -310,7 +310,7 @@
                 </div>
 
                 <div class="boxes-overview-guest">
-                    <h3>Занятость 10 боксов прямо сейчас:</h3>
+                    <h3 data-i18n="boxesOverviewTitle">Занятость 10 боксов прямо сейчас:</h3>
                     <div class="boxes-grid ten-boxes-grid" id="guestBoxesOverview">
                         <!-- 10 Мини-карточек боксов -->
                     </div>
@@ -321,9 +321,9 @@
             <section id="tab-guestPrices" class="tab-content" aria-labelledby="guestPricesTitle">
                 <div class="card">
                     <div class="section-header">
-                        <h2 id="guestPricesTitle">Прайс-лист услуг</h2>
+                        <h2 id="guestPricesTitle" data-i18n="guestPricesTitle">Прайс-лист услуг</h2>
                         <div class="filter-group">
-                            <label for="guestPriceCategory">Класс вашего авто: </label>
+                            <label for="guestPriceCategory" data-i18n="guestPriceCatLabel">Класс вашего авто: </label>
                             <select id="guestPriceCategory" onchange="app.renderGuestPrices()">
                                 <option value="sedan">1 класс — Седан / Хэтчбек</option>
                                 <option value="crossover">2 класс — Кроссовер / Универсал</option>
@@ -336,8 +336,8 @@
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Услуга</th>
-                                    <th>Стоимость</th>
+                                    <th data-i18n="thService">Услуга</th>
+                                    <th data-i18n="thPrice">Стоимость</th>
                                 </tr>
                             </thead>
                             <tbody id="guestPriceTableBody">
@@ -351,34 +351,34 @@
             <!-- Вкладка 5: Контакты -->
             <section id="tab-guestContacts" class="tab-content" aria-labelledby="guestContactsTitle">
                 <div class="card">
-                    <h2 id="guestContactsTitle">Контакты и график работы</h2>
+                    <h2 id="guestContactsTitle" data-i18n="guestContactsTitle">Контакты и график работы</h2>
                     <div class="contacts-grid" id="guestContactsView">
                         <div class="contact-item">
                             <div class="contact-icon" aria-hidden="true">📍</div>
                             <div>
-                                <strong>Адрес:</strong>
+                                <strong data-i18n="contactAddressLabel">Адрес:</strong>
                                 <p id="viewContactAddress">ул. Автомобильная, 12/1</p>
                             </div>
                         </div>
                         <div class="contact-item">
                             <div class="contact-icon" aria-hidden="true">🕒</div>
                             <div>
-                                <strong>График работы:</strong>
-                                <p id="viewContactHours">Круглосуточно 24/7 (без перерывов и выходных)</p>
+                                <strong data-i18n="contactHoursLabel">График работы:</strong>
+                                <p id="viewContactHours" data-i18n="contactHoursValue">Круглосуточно 24/7 (без перерывов и выходных)</p>
                             </div>
                         </div>
                         <div class="contact-item">
                             <div class="contact-icon" aria-hidden="true">📞</div>
                             <div>
-                                <strong>Телефон / WhatsApp:</strong>
+                                <strong data-i18n="contactPhoneLabel">Телефон / WhatsApp:</strong>
                                 <p id="viewContactPhone">+7 (777) 123-45-67</p>
                             </div>
                         </div>
                         <div class="contact-item">
                             <div class="contact-icon" aria-hidden="true">☕</div>
                             <div>
-                                <strong>Комфорт:</strong>
-                                <p id="viewContactNotes">Комфортная зона ожидания, зерновой кофе, бесплатный Wi-Fi</p>
+                                <strong data-i18n="contactComfortLabel">Комфорт:</strong>
+                                <p id="viewContactNotes" data-i18n="contactComfortValue">Комфортная зона ожидания, зерновой кофе, бесплатный Wi-Fi</p>
                             </div>
                         </div>
                     </div>
@@ -446,8 +446,8 @@
             <!-- 1. ВСЕ 10 БОКСОВ И ОЧЕРЕДЬ -->
             <section id="tab-activeOrders" class="tab-content" aria-labelledby="activeOrdersTitle">
                 <div class="section-header">
-                    <h2>Статус 10 боксов автомойки</h2>
-                    <span class="text-muted">Нажмите на свободный бокс для быстрого запуска авто</span>
+                    <h2 data-i18n="status10BoxesTitle">Статус 10 боксов автомойки</h2>
+                    <span class="text-muted" data-i18n="status10BoxesHint">Нажмите на свободный бокс для быстрого запуска авто</span>
                 </div>
 
                 <!-- Баннер новых онлайн-заявок для администратора и владельца -->
@@ -467,8 +467,8 @@
                 </div>
 
                 <div class="section-header" style="margin-top: 2rem;">
-                    <h2 id="activeOrdersTitle">Машины в работе и очереди</h2>
-                    <button class="btn btn-primary" type="button" onclick="app.switchTab('newOrder')">
+                    <h2 id="activeOrdersTitle" data-i18n="activeOrdersTitle">Машины в работе и очереди</h2>
+                    <button class="btn btn-primary" type="button" onclick="app.switchTab('newOrder')" data-i18n="btnNewOrder">
                         + Оформить заезд
                     </button>
                 </div>
@@ -823,6 +823,57 @@
                     </div>
                 </div>
 
+                <!-- 3.1. НАСТРОЙКА SMS-ШЛЮЗА ДЛЯ РЕАЛЬНЫХ SMS (ВЛАДЕЛЕЦ АЛИМЖАН) -->
+                <div class="card" style="margin-top: 1.5rem;" id="smsGatewayCard">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
+                        <div>
+                            <h3 style="font-size:1.2rem; display:flex; align-items:center; gap:0.5rem;" data-i18n="smsGatewayTitle">
+                                📲 Настройка SMS-шлюза (Отправка кодов на мобильные телефоны)
+                            </h3>
+                            <p class="text-muted" style="font-size:0.85rem; margin-top:0.25rem;" data-i18n="smsGatewayDesc">
+                                Подключите SMS-провайдер (SMSC.kz или Mobizon.kz), чтобы коды подтверждения при регистрации и восстановлении пароля моментально приходили на мобильные телефоны клиентов в виде реальных SMS сообщений.
+                            </p>
+                        </div>
+                        <span class="badge" id="smsGatewayStatusBadge" style="background:#e0e7ff; color:#3730a3; font-weight:700; padding:0.35rem 0.75rem;">
+                            SMSC.kz / Mobizon
+                        </span>
+                    </div>
+
+                    <form id="smsGatewayForm" onsubmit="app.saveSmsGatewayConfig(event)">
+                        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:0.85rem;">
+                            <div class="form-group">
+                                <label for="smsProviderSelect" data-i18n="smsProviderLabel">SMS Провайдер *</label>
+                                <select id="smsProviderSelect" onchange="app.onSmsProviderChange()" required>
+                                    <option value="smsc">SMSC.kz (СМС-Центр Казахстан — рекомендуется)</option>
+                                    <option value="mobizon">Mobizon.kz (API Mobizon)</option>
+                                    <option value="webhook">Пользовательский Webhook / Gateway</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="smsLoginGroup">
+                                <label for="smsLoginInput" id="smsLoginLabel" data-i18n="smsLoginLabel">Логин в SMSC.kz *</label>
+                                <input type="text" id="smsLoginInput" placeholder="Ваш логин в smsc.kz" autocomplete="username">
+                            </div>
+                            <div class="form-group" id="smsPassGroup">
+                                <label for="smsPasswordInput" id="smsPassLabel" data-i18n="smsPassLabel">Пароль / API-ключ *</label>
+                                <input type="password" id="smsPasswordInput" placeholder="Пароль от smsc.kz или API ключ" autocomplete="current-password">
+                            </div>
+                            <div class="form-group" id="smsSenderGroup">
+                                <label for="smsSenderInput" data-i18n="smsSenderLabel">Имя отправителя (Sender ID)</label>
+                                <input type="text" id="smsSenderInput" placeholder="CarWash или оставьте пустым" maxlength="15">
+                            </div>
+                        </div>
+
+                        <div style="margin-top:1rem; display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+                            <button type="submit" class="btn btn-primary" data-i18n="smsSaveBtn">💾 Сохранить настройки SMS-шлюза</button>
+                            <button type="button" class="btn btn-outline" onclick="app.sendTestSms()" data-i18n="smsTestBtn">📲 Отправить тестовое SMS на мой номер</button>
+                            <span id="smsTestResult" style="font-size:0.85rem; font-weight:600;"></span>
+                        </div>
+                        <small class="text-muted" style="display:block; margin-top:0.75rem;">
+                            💡 Для Казахстана: зарегистрируйтесь на <a href="https://smsc.kz" target="_blank" rel="noopener" style="color:var(--primary); font-weight:600;">smsc.kz</a>, пополните баланс (от 500 тенге) и введите сюда логин и пароль. Все клиенты будут получать реальные SMS с кодом на Beeline, Kcell, Tele2, Altel.
+                        </small>
+                    </form>
+                </div>
+
                 <div class="card" style="margin-top: 1.5rem;">
                     <h3>Прайс-лист услуг (базовая цена для Седана)</h3>
                     <form id="addServiceForm" onsubmit="app.addService(event)" class="inline-form">
@@ -902,16 +953,8 @@
 
         <!-- ===================== МОДАЛЬНЫЕ ОКНА ===================== -->
 
-        <!-- ИНТЕРАКТИВНОЕ PUSH-УВЕДОМЛЕНИЕ SMS ДЛЯ ПРОВЕРКИ НОМЕРА -->
-        <div id="smsPushBanner" class="sms-push-banner" style="display:none;" onclick="app.hideSmsNotification()">
-            <div class="sms-push-header">
-                <span class="sms-push-app">💬 Сообщения • CarWash Tracker</span>
-                <span class="sms-push-time">сейчас</span>
-            </div>
-            <div class="sms-push-body" id="smsPushBody">
-                Ваш код подтверждения: <strong class="sms-push-code" id="smsPushCode">0000</strong>. Никому не сообщайте данный код.
-            </div>
-        </div>
+        <!-- ИНТЕРАКТИВНОЕ PUSH-УВЕДОМЛЕНИЕ SMS СКРЫТО - КОД ОТПРАВЛЯЕТСЯ НА МОБИЛЬНЫЙ ТЕЛЕФОН -->
+        <div id="smsPushBanner" class="sms-push-banner" style="display:none !important;" aria-hidden="true"></div>
 
         <!-- ЕДИНОЕ МОДАЛЬНОЕ ОКНО: ВХОД И БЫСТРАЯ РЕГИСТРАЦИЯ (БЕЗ ВЫБОРА РОЛЕЙ) -->
         <div class="modal-backdrop" id="authModal" role="dialog" aria-modal="true" aria-labelledby="unifiedAuthTitle">
@@ -929,7 +972,7 @@
 
                     <div class="form-group" style="margin-top: 0.75rem;">
                         <label for="unifiedLoginPhone" id="labelLoginPhone" data-i18n="authPhone">Номер телефона:</label>
-                        <input type="tel" id="unifiedLoginPhone" placeholder="+7 (701) 000-00-00" required maxlength="25" autocomplete="username">
+                        <input type="tel" id="unifiedLoginPhone" placeholder="+7 (701) 000-00-00" data-i18n-placeholder="phonePlaceholder" required maxlength="25" autocomplete="username">
                     </div>
 
                     <div class="form-group" style="margin-top: 0.75rem;">
@@ -958,13 +1001,13 @@
 
                     <div class="form-group" style="margin-top: 0.75rem;">
                         <label for="unifiedRegName" data-i18n="authName">Ваше имя *</label>
-                        <input type="text" id="unifiedRegName" placeholder="Например: Алишер" required maxlength="30" autocomplete="name">
+                        <input type="text" id="unifiedRegName" placeholder="например, Алихан" data-i18n-placeholder="namePlaceholder" required maxlength="30" autocomplete="name">
                     </div>
 
                     <div class="form-group" style="margin-top: 0.75rem;">
                         <label for="unifiedRegPhone" data-i18n="authPhone">Номер телефона *</label>
                         <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
-                            <input type="tel" id="unifiedRegPhone" placeholder="+7 (701) 000-00-00" required maxlength="25" style="flex:1;" autocomplete="tel">
+                            <input type="tel" id="unifiedRegPhone" placeholder="+7 (701) 000-00-00" data-i18n-placeholder="phonePlaceholder" required maxlength="25" style="flex:1;" autocomplete="tel">
                             <button class="btn btn-outline" type="button" id="btnSendSmsCode" onclick="app.sendVerificationCode()" style="white-space:nowrap; font-size:0.82rem; padding:0.4rem 0.65rem;" data-i18n="authGetCode">
                                 📲 Получить код
                             </button>
@@ -1006,7 +1049,7 @@
                     <div class="form-group" style="margin-top: 0.75rem;">
                         <label for="forgotPhone" id="labelForgotPhone" data-i18n="authPhone">Номер телефона *</label>
                         <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
-                            <input type="tel" id="forgotPhone" placeholder="+7 (701) 000-00-00" required maxlength="25" style="flex:1;" autocomplete="tel">
+                            <input type="tel" id="forgotPhone" placeholder="+7 (701) 000-00-00" data-i18n-placeholder="phonePlaceholder" required maxlength="25" style="flex:1;" autocomplete="tel">
                             <button class="btn btn-outline" type="button" id="btnSendForgotCode" onclick="app.sendForgotCode()" style="white-space:nowrap; font-size:0.82rem; padding:0.4rem 0.65rem;" data-i18n="authGetCode">
                                 📲 Получить код
                             </button>
@@ -1049,35 +1092,35 @@
         <!-- 4. МОДАЛЬНОЕ ОКНО: ОПЛАТА И ЗАКРЫТИЕ ЗАКАЗА -->
         <div class="modal-backdrop" id="paymentModal" role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
             <div class="modal-window">
-                <h2 id="paymentModalTitle">Расчет заказа #<span id="payOrderId"></span></h2>
+                <h2 id="paymentModalTitle"><span data-i18n="paymentModalTitle">Расчет заказа</span> #<span id="payOrderId"></span></h2>
                 <p id="payOrderInfo" class="text-muted"></p>
 
                 <div class="pay-amount-box">
-                    <span>Сумма к оплате:</span>
+                    <span data-i18n="payAmountLabel">Сумма к оплате:</span>
                     <strong id="payTotalAmount">0 ₸</strong>
                 </div>
 
                 <div class="form-group" style="margin-top: 1rem;">
-                    <label>Способ оплаты:</label>
+                    <label data-i18n="payMethodLabel">Способ оплаты:</label>
                     <div class="payment-types">
                         <label class="pay-type-option">
                             <input type="radio" name="payMethod" value="cash" checked>
-                            <span>💵 Наличные</span>
+                            <span data-i18n="payMethodCash">💵 Наличные</span>
                         </label>
                         <label class="pay-type-option">
                             <input type="radio" name="payMethod" value="card">
-                            <span>💳 Карта / POS</span>
+                            <span data-i18n="payMethodCard">💳 Карта / POS</span>
                         </label>
                         <label class="pay-type-option">
                             <input type="radio" name="payMethod" value="transfer">
-                            <span>📱 Kaspi / QR</span>
+                            <span data-i18n="payMethodKaspi">📱 Kaspi / QR</span>
                         </label>
                     </div>
                 </div>
 
                 <div class="modal-actions">
-                    <button class="btn btn-outline" type="button" onclick="app.closePaymentModal()">Отмена</button>
-                    <button class="btn btn-success" type="button" onclick="app.confirmPayment()">✅ Подтвердить оплату</button>
+                    <button class="btn btn-outline" type="button" onclick="app.closePaymentModal()" data-i18n="authCancel">Отмена</button>
+                    <button class="btn btn-success" type="button" onclick="app.confirmPayment()" data-i18n="payConfirmBtn">✅ Подтвердить оплату</button>
                 </div>
             </div>
         </div>
@@ -1086,10 +1129,10 @@
         <div class="modal-backdrop" id="qrModal" role="dialog" aria-modal="true" aria-labelledby="qrModalTitle">
             <div class="modal-window" style="text-align:center; max-width:440px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                    <h2 id="qrModalTitle" style="margin:0; font-size:1.25rem;">📱 QR-код для клиентов</h2>
-                    <button class="btn-link" type="button" onclick="app.closeQrModal()" style="font-size:1.4rem; line-height:1;" title="Закрыть">✕</button>
+                    <h2 id="qrModalTitle" style="margin:0; font-size:1.25rem;" data-i18n="qrModalTitle">📱 QR-код для клиентов</h2>
+                    <button class="btn-link" type="button" onclick="app.closeQrModal()" style="font-size:1.4rem; line-height:1;" title="Закрыть" data-i18n-title="btnClose">✕</button>
                 </div>
-                <p class="text-muted" style="font-size:0.85rem; margin-bottom:1.25rem;">
+                <p class="text-muted" style="font-size:0.85rem; margin-bottom:1.25rem;" data-i18n="qrModalDesc">
                     Наведите камеру любого смартфона на этот QR-код, чтобы моментально открыть автомойку, записаться онлайн и смотреть статус авто.
                 </p>
                 
@@ -1102,9 +1145,9 @@
                 </div>
 
                 <div class="modal-actions" style="justify-content:center; gap:0.6rem; flex-wrap:wrap;">
-                    <button class="btn btn-primary" type="button" onclick="app.printQrFlyer()">🖨 Распечатать плакат А4</button>
-                    <button class="btn btn-outline" type="button" onclick="app.copySiteUrl()">📋 Скопировать</button>
-                    <button class="btn btn-outline" type="button" onclick="app.closeQrModal()">Закрыть</button>
+                    <button class="btn btn-primary" type="button" onclick="app.printQrFlyer()" data-i18n="qrPrintBtn">🖨 Распечатать плакат А4</button>
+                    <button class="btn btn-outline" type="button" onclick="app.copySiteUrl()" data-i18n="qrCopyBtn">📋 Скопировать</button>
+                    <button class="btn btn-outline" type="button" onclick="app.closeQrModal()" data-i18n="btnClose">Закрыть</button>
                 </div>
             </div>
         </div>

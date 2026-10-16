@@ -79,6 +79,8 @@ const TRANSLATIONS = {
         siteTitle: 'CarWash Tracker',
         shift247: '🕒 24/7 Круглосуточно',
         themeBtn: 'Тема',
+        themeDark: 'Темная',
+        themeLight: 'Светлая',
         qrBtn: 'QR-код',
         loginBtn: '👤 Войти',
         logoutBtn: '🚪 Выйти ({name})',
@@ -108,6 +110,8 @@ const TRANSLATIONS = {
         clientBarHint: 'Войдите в личный кабинет, чтобы сохранять свои авто и бронировать время',
         clientBarLogin: '🔑 Вход / Регистрация',
         clientBarActive: 'Личный кабинет активен • Тел: {phone}',
+        clientHello: 'Здравствуйте, {name}!',
+        btnGarageCount: '🚗 Гараж ({count})',
 
         authGateTitle: 'Для онлайн-записи необходимо войти или зарегистрироваться',
         authGateDesc: 'Создайте аккаунт за 30 секунд или войдите по номеру телефона, чтобы выбрать свой автомобиль, время мойки и занять очередь в бокс.',
@@ -115,20 +119,25 @@ const TRANSLATIONS = {
         authGateRegBtn: '✨ Быстрая регистрация',
 
         bookingTitle: '📅 Онлайн-бронирование времени',
-        bookingDesc: 'Забронируйте удобное время. Мы работаем круглосуточно 24/7! Администратор подтвердит заявку и подготовит бокс к вашему приезду.',
+        bookingDesc: 'Забронируйте удобное время. Мы работаем <strong>круглосуточно 24/7</strong>! Администратор подтвердит заявку и подготовит бокс к вашему приезду.',
         bookingCarSelect: 'Выберите автомобиль *',
         bookingNewCar: '+ Ввести другой автомобиль...',
         bookingPlate: 'Госномер авто *',
+        platePlaceholder: 'например, 777 AAA 01',
         bookingModel: 'Марка и модель',
+        modelPlaceholder: 'например, Toyota Camry',
         bookingCategory: 'Класс кузова *',
         bookingDate: 'Желаемая дата *',
         bookingTime: 'Время заезда *',
         bookingName: 'Ваше имя *',
+        namePlaceholder: 'например, Алихан',
         bookingPhone: 'Телефон для связи *',
+        phonePlaceholder: '+7 (701) 000-00-00',
         bookingServices: 'Выберите желаемые услуги:',
         bookingEstimated: 'Предварительно:',
         bookingSubmit: '📅 Отправить заявку',
         bookingMyTitle: 'Мои записи и статус',
+        bookingMyDesc: 'Здесь отображается статус ваших заявок на бронь в реальном времени:',
         bookingEmpty: 'У вас пока нет активных заявок на бронь.',
         bookingEmptySub: 'Заполните форму слева, чтобы забронировать бокс на удобное время.',
 
@@ -136,6 +145,46 @@ const TRANSLATIONS = {
         catCrossover: '2 класс — Кроссовер / Универсал',
         catSuv: '3 класс — Внедорожник / Джип',
         catMinivan: '4 класс — Микроавтобус / Коммерческий',
+
+        guestCarsTitle: '🚗 Мой гараж',
+        guestCarsDesc: 'Сохраните свои автомобили, чтобы бронировать мойку в 1 клик без постоянного ввода госномера.',
+        garageEmpty: 'У вас пока нет сохраненных авто. Добавьте свою первую машину справа!',
+        addCarTitle: '+ Добавить автомобиль в гараж',
+        garagePlate: 'Госномер *',
+        garageModel: 'Марка и модель *',
+        garageCategory: 'Класс кузова *',
+        saveCarBtn: '+ Сохранить автомобиль',
+        deleteBtn: 'Удалить',
+
+        guestSearchTitle: 'Проверка готовности автомобиля',
+        guestSearchDesc: 'Введите госномер вашего авто, чтобы узнать статус мойки в реальном времени:',
+        guestSearchBtn: 'Проверить',
+        boxesOverviewTitle: 'Занятость 10 боксов прямо сейчас:',
+        carNotFoundTitle: 'Автомобиль не найден',
+        carNotFoundDesc: 'Авто с госномером {plate} сейчас нет в боксах автомойки.',
+        searchWaitHint: 'Если вы только что заехали, администратор оформит заказ через минуту.',
+        searchCarWashing: '🚿 Автомобиль моется в {box}',
+        searchCarReady: '✅ Автомобиль вымыт и готов к выдаче! ({box})',
+        searchCost: 'Стоимость',
+        searchPaidMsg: 'Заказ уже оплачен! Ожидайте завершения мойки в комнате отдыха.',
+        searchWaitLounge: 'Ожидайте в комнате отдыха. Мы сообщим, когда авто будет готово!',
+        searchPickUpMsg: 'Заказ полностью оплачен. Можете забирать ваш чистый автомобиль!',
+        searchToPay: 'К оплате',
+        searchGoToAdmin: 'Вы можете подойти к администратору для расчета и забрать авто.',
+        searchWashCompleted: 'Мойка завершена и оплачена. Спасибо, что выбрали нас!',
+
+        guestPricesTitle: 'Прайс-лист услуг',
+        guestPriceCatLabel: 'Класс вашего авто: ',
+        thService: 'Услуга',
+        thPrice: 'Стоимость',
+
+        guestContactsTitle: 'Контакты и график работы',
+        contactAddressLabel: 'Адрес:',
+        contactHoursLabel: 'График работы:',
+        contactHoursValue: 'Круглосуточно 24/7 (без перерывов и выходных)',
+        contactPhoneLabel: 'Телефон / WhatsApp:',
+        contactComfortLabel: 'Комфорт:',
+        contactComfortValue: 'Комфортная зона ожидания, зерновой кофе, бесплатный Wi-Fi',
 
         boxFree: 'Свободен',
         boxBusy: 'Занят',
@@ -153,6 +202,10 @@ const TRANSLATIONS = {
         boxPay: '💳 Оплата',
         boxDone: '✅ Готово',
         boxEmptyBay: 'Бокс свободен',
+        status10BoxesTitle: 'Статус 10 боксов автомойки',
+        status10BoxesHint: 'Нажмите на свободный бокс для быстрого запуска авто',
+        activeOrdersTitle: 'Машины в работе и очереди',
+        btnNewOrder: '+ Оформить заезд',
 
         authLoginTab: '🔑 Вход в систему',
         authRegTab: '✨ Регистрация',
@@ -183,6 +236,7 @@ const TRANSLATIONS = {
         forgotSaveBtn: '💾 Сохранить новый пароль и войти',
         forgotBackBtn: '← Назад ко входу',
         smsCodeSent: '📩 Проверочный код отправлен! Введите полученный 4-значный код:',
+        smsDispatchedToPhone: '📲 SMS с 4-значным кодом подтверждения отправлено на номер {phone}. Проверьте сообщения на мобильном телефоне.',
         smsCodeVerified: '✅ Номер телефона успешно подтверждён!',
         smsEnterNewPassPrompt: '✅ Номер подтверждён! Теперь введите новый пароль ниже.',
         passChangedSuccess: '🎉 Пароль успешно изменен! Вы вошли в систему.',
@@ -190,12 +244,53 @@ const TRANSLATIONS = {
         codeInvalid: '❌ Неверный проверочный код. Проверьте SMS и повторите ввод.',
         codeExpired: '⚠️ Срок действия кода истек. Запросите код заново.',
         authRequiredToBook: '🔒 Для онлайн-записи и добавления машины в очередь необходимо войти или зарегистрироваться!',
-        authRequiredToAddCar: '🔒 Чтобы добавить автомобиль в гараж, пожалуйста, войдите в личный кабинет.'
+        authRequiredToAddCar: '🔒 Чтобы добавить автомобиль в гараж, пожалуйста, войдите в личный кабинет.',
+
+        qrModalTitle: '📱 QR-код для клиентов',
+        qrModalDesc: 'Наведите камеру любого смартфона на этот QR-код, чтобы моментально открыть автомойку, записаться онлайн и смотреть статус авто.',
+        qrPrintBtn: '🖨 Распечатать плакат А4',
+        qrCopyBtn: '📋 Скопировать',
+        btnClose: 'Закрыть',
+
+        paymentModalTitle: 'Расчет заказа',
+        payAmountLabel: 'Сумма к оплате:',
+        payMethodLabel: 'Способ оплаты:',
+        payMethodCash: '💵 Наличные',
+        payMethodCard: '💳 Карта / POS',
+        payMethodKaspi: '📱 Kaspi / QR',
+        payConfirmBtn: '✅ Подтвердить оплату',
+
+        smsGatewayTitle: '📲 Настройка SMS-шлюза (Отправка кодов на мобильные телефоны)',
+        smsGatewayDesc: 'Подключите SMS-провайдер (SMSC.kz или Mobizon.kz), чтобы коды подтверждения при регистрации и восстановлении пароля моментально приходили на мобильные телефоны клиентов в виде реальных SMS сообщений.',
+        smsProviderLabel: 'SMS Провайдер *',
+        smsLoginLabel: 'Логин в SMSC.kz *',
+        smsPassLabel: 'Пароль / API-ключ *',
+        smsSenderLabel: 'Имя отправителя (Sender ID)',
+        smsSaveBtn: '💾 Сохранить настройки SMS-шлюза',
+        smsTestBtn: '📲 Отправить тестовое SMS на мой номер',
+
+        filterPending: 'Ожидают решения',
+        filterWaiting: 'В листе ожидания',
+        filterConfirmed: 'Подтвержденные (в очереди)',
+        filterAll: 'Все заявки',
+        staffRoleAdmin: '📋 Администратор (10 боксов, брони, касса смены)',
+        staffRoleWorker: '🧽 Мойщик (назначенные авто, свой заработок)',
+        staffRoleOwner: '👑 Владелец (полный доступ, аналитика, настройки)',
+        statusPending: '⏳ На рассмотрении администратором',
+        statusWaiting: '⏱ В листе ожидания',
+        statusConfirmed: '✅ Подтверждено администратором',
+        statusInProgress: '🚿 Автомобиль моется в боксе',
+        statusCompleted: '🎉 Мойка завершена и оплачена',
+        statusCancelled: '❌ Заявка отклонена / отменена',
+        cancelBookingBtn: 'Отменить запись',
+        basePriceLabel: 'базовая'
     },
     kk: {
         siteTitle: 'CarWash Tracker',
         shift247: '🕒 24/7 Тәулік бойы',
         themeBtn: 'Тақырып',
+        themeDark: 'Күңгірт',
+        themeLight: 'Ашық',
         qrBtn: 'QR-код',
         loginBtn: '👤 Кіру',
         logoutBtn: '🚪 Шығу ({name})',
@@ -225,6 +320,8 @@ const TRANSLATIONS = {
         clientBarHint: 'Көліктеріңізді сақтау және уақыт брондау үшін жеке кабинетке кіріңіз',
         clientBarLogin: '🔑 Кіру / Тіркелу',
         clientBarActive: 'Жеке кабинет белсенді • Тел: {phone}',
+        clientHello: 'Сәлеметсіз бе, {name}!',
+        btnGarageCount: '🚗 Гараж ({count})',
 
         authGateTitle: 'Онлайн жазылу үшін жүйеге кіру немесе тіркелу қажет',
         authGateDesc: 'Көлігіңізді таңдап, ыңғайлы уақытқа боксқа жазылу үшін 30 секунд ішінде тіркеліңіз немесе телефон нөміріңізбен кіріңіз.',
@@ -232,20 +329,25 @@ const TRANSLATIONS = {
         authGateRegBtn: '✨ Жылдам тіркелу',
 
         bookingTitle: '📅 Уақытты онлайн брондау',
-        bookingDesc: 'Ыңғайлы уақытты брондаңыз. Біз тәулік бойы 24/7 жұмыс істейміз! Әкімші өтінімді растап, боксты дайындайды.',
+        bookingDesc: 'Ыңғайлы уақытты брондаңыз. Біз <strong>тәулік бойы 24/7</strong> жұмыс істейміз! Әкімші өтінімді растап, боксты дайындайды.',
         bookingCarSelect: 'Көлікті таңдаңыз *',
         bookingNewCar: '+ Басқа көлікті енгізу...',
         bookingPlate: 'Мемлекеттік нөмірі *',
+        platePlaceholder: 'мысалы, 777 AAA 01',
         bookingModel: 'Маркасы және моделі',
+        modelPlaceholder: 'мысалы, Toyota Camry',
         bookingCategory: 'Шанақ класы *',
         bookingDate: 'Қажетті күн *',
         bookingTime: 'Кіру уақыты *',
         bookingName: 'Аты-жөніңіз *',
+        namePlaceholder: 'мысалы, Әлихан',
         bookingPhone: 'Байланыс телефоны *',
+        phonePlaceholder: '+7 (701) 000-00-00',
         bookingServices: 'Қажетті қызметтерді таңдаңыз:',
         bookingEstimated: 'Алдын ала сома:',
         bookingSubmit: '📅 Өтінімді жіберу',
         bookingMyTitle: 'Менің жазбаларым мен мәртебе',
+        bookingMyDesc: 'Мұнда сіздің брондау өтінімдеріңіздің нақты уақыттағы мәртебесі көрсетіледі:',
         bookingEmpty: 'Әзірге белсенді брондау өтінімдеріңіз жоқ.',
         bookingEmptySub: 'Ыңғайлы уақытқа бокс брондау үшін сол жақтағы форманы толтырыңыз.',
 
@@ -253,6 +355,46 @@ const TRANSLATIONS = {
         catCrossover: '2 класс — Кроссовер / Әмбебап',
         catSuv: '3 класс — Жол талғамайтын / Джип',
         catMinivan: '4 класс — Шағын автобус / Коммерциялық',
+
+        guestCarsTitle: '🚗 Менің гаражым',
+        guestCarsDesc: 'Мемлекеттік нөмірді үнемі теріп отырмай, 1 басумен жууға жазылу үшін көліктеріңізді сақтаңыз.',
+        garageEmpty: 'Сізде әзірге сақталған көліктер жоқ. Оң жақтағы форма арқылы алғашқы көлігіңізді қосыңыз!',
+        addCarTitle: '+ Гаражға көлік қосу',
+        garagePlate: 'Мемлекеттік нөмірі *',
+        garageModel: 'Маркасы және моделі *',
+        garageCategory: 'Шанақ класы *',
+        saveCarBtn: '+ Көлікті сақтау',
+        deleteBtn: 'Жою',
+
+        guestSearchTitle: 'Көліктің дайындығын тексеру',
+        guestSearchDesc: 'Жуу барысын нақты уақытта білу үшін көліктің мемлекеттік нөмірін енгізіңіз:',
+        guestSearchBtn: 'Тексеру',
+        boxesOverviewTitle: 'Қазіргі уақыттағы 10 бокстың бостығы:',
+        carNotFoundTitle: 'Көлік табылмады',
+        carNotFoundDesc: '{plate} нөмірлі көлік қазір автожуудағы бокстарда жоқ.',
+        searchWaitHint: 'Егер сіз жаңа ғана келсеңіз, әкімші тапсырысты бір минут ішінде рәсімдейді.',
+        searchCarWashing: '🚿 Көлік {box} ішінде жуылуда',
+        searchCarReady: '✅ Көлік жуылды және тапсыруға дайын! ({box})',
+        searchCost: 'Құны',
+        searchPaidMsg: 'Тапсырыс төленді! Демалыс бөлмесінде жуу аяқталуын күтіңіз.',
+        searchWaitLounge: 'Демалыс бөлмесінде күтіңіз. Көлік дайын болғанда хабарлаймыз!',
+        searchPickUpMsg: 'Тапсырыс толық төленді. Таза көлігіңізді алып кетуге болады!',
+        searchToPay: 'Төлеуге',
+        searchGoToAdmin: 'Есептесу және көлікті алып кету үшін әкімшіге барыңыз.',
+        searchWashCompleted: 'Жуу аяқталды және төленді. Бізді таңдағаныңызға рақмет!',
+
+        guestPricesTitle: 'Қызметтердің бағалар тізімі',
+        guestPriceCatLabel: 'Көлігіңіздің класы: ',
+        thService: 'Қызмет',
+        thPrice: 'Құны',
+
+        guestContactsTitle: 'Байланыс және жұмыс кестесі',
+        contactAddressLabel: 'Мекенжай:',
+        contactHoursLabel: 'Жұмыс кестесі:',
+        contactHoursValue: 'Тәулік бойы 24/7 (демалыссыз және үзіліссіз)',
+        contactPhoneLabel: 'Телефон / WhatsApp:',
+        contactComfortLabel: 'Ыңғайлылық:',
+        contactComfortValue: 'Жайлы күту аймағы, дәнді кофе, тегін Wi-Fi',
 
         boxFree: 'Бос',
         boxBusy: 'Бос емес',
@@ -270,6 +412,10 @@ const TRANSLATIONS = {
         boxPay: '💳 Төлем',
         boxDone: '✅ Дайын',
         boxEmptyBay: 'Бокс бос',
+        status10BoxesTitle: 'Автожуудың 10 боксының мәртебесі',
+        status10BoxesHint: 'Көлікті жылдам бастау үшін бос боксты басыңыз',
+        activeOrdersTitle: 'Жұмыстағы және кезектегі көліктер',
+        btnNewOrder: '+ Кіруді рәсімдеу',
 
         authLoginTab: '🔑 Жүйеге кіру',
         authRegTab: '✨ Тіркелу',
@@ -298,21 +444,63 @@ const TRANSLATIONS = {
         forgotNewPassLabel: 'Жаңа құпия сөзді енгізіңіз (кемінде 4 таңба) *',
         forgotNewPassRepeat: 'Жаңа құпия сөзді қайталаңыз *',
         forgotSaveBtn: '💾 Жаңа құпия сөзді сақтау және кіру',
-        forgotBackBtn: '← Кіруге оралу',
+        forgotBackBtn: '← Кіруге қайту',
         smsCodeSent: '📩 Тексеру коды жіберілді! 4 таңбалы кодты енгізіңіз:',
+        smsDispatchedToPhone: '📲 4 таңбалы тексеру коды бар SMS {phone} нөміріне жіберілді. Ұялы телефоныңыздағы хабарламаларды тексеріңіз.',
         smsCodeVerified: '✅ Телефон нөмірі сәтті расталды!',
-        smsEnterNewPassPrompt: '✅ Нөмір расталды! Төменде жаңа құпия сөзді енгізіңіз.',
+        smsEnterNewPassPrompt: '✅ Нөмір расталды! Енді төменде жаңа құпия сөзді енгізіңіз.',
         passChangedSuccess: '🎉 Құпия сөз сәтті өзгертілді! Жүйеге кірдіңіз.',
-        userNotFound: '❌ Мұндай нөмірмен пайдаланушы табылмады. Нөмірді тексеріңіз немесе тіркеліңіз.',
-        codeInvalid: '❌ Тексеру коды қате. SMS-тегі кодты тексеріп, қайта енгізіңіз.',
-        codeExpired: '⚠️ Кодтың қолданылу мерзімі аяқталды. Қайтадан код сұраңыз.',
-        authRequiredToBook: '🔒 Онлайн брондау және көлікті кезекке қою үшін жүйеге кіріңіз немесе тіркеліңіз!',
-        authRequiredToAddCar: '🔒 Көлікті гаражға қосу үшін жеке кабинетке кіріңіз.'
+        userNotFound: '❌ Бұл нөмірмен пайдаланушы табылмады. Нөмірді тексеріңіз немесе тіркеліңіз.',
+        codeInvalid: '❌ Тексеру коды қате. SMS-ті тексеріп, қайта енгізіңіз.',
+        codeExpired: '⚠️ Кодтың мерзімі өтіп кетті. Жаңа кодты сұраңыз.',
+        authRequiredToBook: '🔒 Онлайн жазылу және көлікті кезекке қою үшін жүйеге кіру немесе тіркелу қажет!',
+        authRequiredToAddCar: '🔒 Көлікті гаражға қосу үшін жеке кабинетке кіріңіз.',
+
+        qrModalTitle: '📱 Клиенттерге арналған QR-код',
+        qrModalDesc: 'Автожууды ашып, онлайн жазылу және көлік күйін көру үшін кез келген смартфонның камерасын осы QR-кодқа бағыттаңыз.',
+        qrPrintBtn: '🖨 А4 плакатын басып шығару',
+        qrCopyBtn: '📋 Көшіру',
+        btnClose: 'Жабу',
+
+        paymentModalTitle: 'Тапсырысты есептеу',
+        payAmountLabel: 'Төленетін сома:',
+        payMethodLabel: 'Төлем әдісі:',
+        payMethodCash: '💵 Қолма-қол',
+        payMethodCard: '💳 Карта / POS',
+        payMethodKaspi: '📱 Kaspi / QR',
+        payConfirmBtn: '✅ Төлемді растау',
+
+        smsGatewayTitle: '📲 SMS-шлюз баптауы (Ұялы телефондарға код жіберу)',
+        smsGatewayDesc: 'Тіркелу және құпия сөзді қалпына келтіру кезінде растау кодтары клиенттердің ұялы телефондарына нақты SMS ретінде келуі үшін SMS-провайдерді қосыңыз.',
+        smsProviderLabel: 'SMS Провайдер *',
+        smsLoginLabel: 'SMSC.kz логині *',
+        smsPassLabel: 'Құпия сөз / API кілті *',
+        smsSenderLabel: 'Жөнелтуші аты (Sender ID)',
+        smsSaveBtn: '💾 SMS-шлюз баптауларын сақтау',
+        smsTestBtn: '📲 Менің нөміріме сынақ SMS жіберу',
+
+        filterPending: 'Шешімді күтуде',
+        filterWaiting: 'Күту парағында',
+        filterConfirmed: 'Расталған (кезекте)',
+        filterAll: 'Барлық өтінімдер',
+        staffRoleAdmin: '📋 Әкімші (10 бокс, бронь, ауысым кассасы)',
+        staffRoleWorker: '🧽 Жуушы (тағайындалған көліктер, табыс)',
+        staffRoleOwner: '👑 Иесі (толық рұқсат, аналитика, баптаулар)',
+        statusPending: '⏳ Әкімшінің қарауында',
+        statusWaiting: '⏱ Күту парағында',
+        statusConfirmed: '✅ Әкімші растады',
+        statusInProgress: '🚿 Көлік бокста жуылуда',
+        statusCompleted: '🎉 Жуу аяқталды және төленді',
+        statusCancelled: '❌ Өтінім қайтарылды / жойылды',
+        cancelBookingBtn: 'Жазылудан бас тарту',
+        basePriceLabel: 'базалық'
     },
     en: {
         siteTitle: 'CarWash Tracker',
         shift247: '🕒 24/7 Open 24 Hours',
         themeBtn: 'Theme',
+        themeDark: 'Dark',
+        themeLight: 'Light',
         qrBtn: 'QR Code',
         loginBtn: '👤 Sign In',
         logoutBtn: '🚪 Sign Out ({name})',
@@ -342,6 +530,8 @@ const TRANSLATIONS = {
         clientBarHint: 'Log in to your account to save vehicles and book wash appointments',
         clientBarLogin: '🔑 Sign In / Register',
         clientBarActive: 'Client Account Active • Tel: {phone}',
+        clientHello: 'Hello, {name}!',
+        btnGarageCount: '🚗 Garage ({count})',
 
         authGateTitle: 'Please sign in or register to book an appointment',
         authGateDesc: 'Create an account in 30 seconds or sign in with your phone to pick your vehicle, choose wash time, and join the queue.',
@@ -349,20 +539,25 @@ const TRANSLATIONS = {
         authGateRegBtn: '✨ Quick Registration',
 
         bookingTitle: '📅 Online Wash Booking',
-        bookingDesc: 'Book your preferred time slot. We are open 24/7! The administrator will confirm your reservation and prepare the wash bay.',
+        bookingDesc: 'Book your preferred time slot. We are open <strong>24/7 round-the-clock</strong>! The administrator will confirm your reservation and prepare the wash bay.',
         bookingCarSelect: 'Select Vehicle *',
         bookingNewCar: '+ Enter another vehicle...',
         bookingPlate: 'License Plate *',
+        platePlaceholder: 'e.g., 777 AAA 01',
         bookingModel: 'Make & Model',
+        modelPlaceholder: 'e.g., Toyota Camry',
         bookingCategory: 'Vehicle Class *',
         bookingDate: 'Preferred Date *',
         bookingTime: 'Arrival Time *',
         bookingName: 'Your Name *',
+        namePlaceholder: 'e.g., Alex',
         bookingPhone: 'Phone Number *',
+        phonePlaceholder: '+7 (701) 000-00-00',
         bookingServices: 'Select Services:',
         bookingEstimated: 'Estimated Total:',
         bookingSubmit: '📅 Submit Booking',
         bookingMyTitle: 'My Bookings & Status',
+        bookingMyDesc: 'Real-time status of your car wash booking requests:',
         bookingEmpty: 'You have no active bookings yet.',
         bookingEmptySub: 'Fill in the form on the left to book a bay at your convenience.',
 
@@ -370,6 +565,46 @@ const TRANSLATIONS = {
         catCrossover: 'Class 2 — Crossover / Wagon',
         catSuv: 'Class 3 — SUV / 4x4',
         catMinivan: 'Class 4 — Minivan / Commercial',
+
+        guestCarsTitle: '🚗 My Garage',
+        guestCarsDesc: 'Save your vehicles to book washes in 1 click without re-entering license plates.',
+        garageEmpty: 'You have no saved vehicles yet. Add your first vehicle on the right!',
+        addCarTitle: '+ Add Vehicle to Garage',
+        garagePlate: 'License Plate *',
+        garageModel: 'Make & Model *',
+        garageCategory: 'Body Category *',
+        saveCarBtn: '+ Save Vehicle',
+        deleteBtn: 'Delete',
+
+        guestSearchTitle: 'Vehicle Readiness Check',
+        guestSearchDesc: 'Enter your license plate to track wash progress in real time:',
+        guestSearchBtn: 'Check Status',
+        boxesOverviewTitle: 'Live Status of 10 Wash Bays:',
+        carNotFoundTitle: 'Vehicle Not Found',
+        carNotFoundDesc: 'Vehicle {plate} is not currently in any wash bay.',
+        searchWaitHint: 'If you just arrived, the administrator will log your order shortly.',
+        searchCarWashing: '🚿 Vehicle is being washed in {box}',
+        searchCarReady: '✅ Vehicle is washed and ready for pick-up! ({box})',
+        searchCost: 'Cost',
+        searchPaidMsg: 'Order has been paid! Please wait in the guest lounge.',
+        searchWaitLounge: 'Please wait in our lounge. We will notify you when your car is ready!',
+        searchPickUpMsg: 'Order fully paid. You may pick up your clean vehicle!',
+        searchToPay: 'Amount due',
+        searchGoToAdmin: 'Please proceed to the administrator desk to settle payment and pick up your car.',
+        searchWashCompleted: 'Wash completed and paid. Thank you for choosing us!',
+
+        guestPricesTitle: 'Service Price List',
+        guestPriceCatLabel: 'Vehicle class: ',
+        thService: 'Service',
+        thPrice: 'Price',
+
+        guestContactsTitle: 'Contacts & Working Hours',
+        contactAddressLabel: 'Address:',
+        contactHoursLabel: 'Working Hours:',
+        contactHoursValue: 'Open 24/7 (around the clock, no days off)',
+        contactPhoneLabel: 'Phone / WhatsApp:',
+        contactComfortLabel: 'Amenities:',
+        contactComfortValue: 'Comfortable waiting lounge, fresh coffee, free high-speed Wi-Fi',
 
         boxFree: 'Available',
         boxBusy: 'Occupied',
@@ -387,6 +622,10 @@ const TRANSLATIONS = {
         boxPay: '💳 Payment',
         boxDone: '✅ Done',
         boxEmptyBay: 'Bay available',
+        status10BoxesTitle: 'Status of 10 Wash Bays',
+        status10BoxesHint: 'Click any available bay to quickly start a wash',
+        activeOrdersTitle: 'Active Washes & Queue',
+        btnNewOrder: '+ New Check-in',
 
         authLoginTab: '🔑 Sign In',
         authRegTab: '✨ Registration',
@@ -400,7 +639,7 @@ const TRANSLATIONS = {
         authRegTitle: 'Client Registration',
         authRegDesc: 'Create an account to save your vehicles and manage wash bookings.',
         authName: 'Your Name *',
-        authGetCode: '📲 Send SMS Code',
+        authGetCode: '📲 Send Code',
         authCodeLabel: 'SMS Code (4 digits):',
         authVerifyCode: 'Verify',
         authPassCreate: 'Create password (min 4 chars) *',
@@ -417,6 +656,7 @@ const TRANSLATIONS = {
         forgotSaveBtn: '💾 Save New Password & Sign In',
         forgotBackBtn: '← Back to Sign In',
         smsCodeSent: '📩 Verification code sent! Enter the 4-digit code:',
+        smsDispatchedToPhone: '📲 SMS verification code sent to {phone}. Please check incoming messages on your phone.',
         smsCodeVerified: '✅ Phone number verified successfully!',
         smsEnterNewPassPrompt: '✅ Phone verified! Please enter your new password below.',
         passChangedSuccess: '🎉 Password changed successfully! You are now logged in.',
@@ -424,7 +664,46 @@ const TRANSLATIONS = {
         codeInvalid: '❌ Invalid verification code. Please check SMS and try again.',
         codeExpired: '⚠️ Verification code expired. Please request a new one.',
         authRequiredToBook: '🔒 Please sign in or register before booking an appointment or queuing your car!',
-        authRequiredToAddCar: '🔒 Please sign in to your account before adding vehicles to your garage.'
+        authRequiredToAddCar: '🔒 Please sign in to your account before adding vehicles to your garage.',
+
+        qrModalTitle: '📱 Client QR Code',
+        qrModalDesc: 'Point any smartphone camera at this QR code to instantly open the car wash app, book online, and check vehicle status.',
+        qrPrintBtn: '🖨 Print A4 Poster',
+        qrCopyBtn: '📋 Copy Link',
+        btnClose: 'Close',
+
+        paymentModalTitle: 'Order Settlement',
+        payAmountLabel: 'Amount Due:',
+        payMethodLabel: 'Payment Method:',
+        payMethodCash: '💵 Cash',
+        payMethodCard: '💳 Card / POS',
+        payMethodKaspi: '📱 Kaspi / QR',
+        payConfirmBtn: '✅ Confirm Payment',
+
+        smsGatewayTitle: '📲 SMS Gateway (Deliver codes to cell phones)',
+        smsGatewayDesc: 'Connect an SMS provider (SMSC.kz or Mobizon.kz) so verification codes are sent directly to client mobile phones as real SMS text messages.',
+        smsProviderLabel: 'SMS Provider *',
+        smsLoginLabel: 'SMSC.kz Login *',
+        smsPassLabel: 'Password / API Key *',
+        smsSenderLabel: 'Sender ID (Name)',
+        smsSaveBtn: '💾 Save SMS Gateway Settings',
+        smsTestBtn: '📲 Send Test SMS to My Phone',
+
+        filterPending: 'Pending Decision',
+        filterWaiting: 'In Waitlist',
+        filterConfirmed: 'Confirmed (In Queue)',
+        filterAll: 'All Bookings',
+        staffRoleAdmin: '📋 Administrator (10 bays, bookings, shift cash)',
+        staffRoleWorker: '🧽 Washer (assigned cars, personal earnings)',
+        staffRoleOwner: '👑 Owner (full access, analytics, settings)',
+        statusPending: '⏳ Pending admin review',
+        statusWaiting: '⏱ In waitlist',
+        statusConfirmed: '✅ Confirmed by admin',
+        statusInProgress: '🚿 Vehicle being washed',
+        statusCompleted: '🎉 Wash finished and paid',
+        statusCancelled: '❌ Booking cancelled',
+        cancelBookingBtn: 'Cancel Booking',
+        basePriceLabel: 'base price'
     }
 };
 
@@ -1397,7 +1676,7 @@ class CarWashApp {
 
         const statusEl = document.getElementById('codeVerificationStatus');
         if (statusEl) {
-            statusEl.innerHTML = `<span style="color:var(--primary); font-size:0.85rem;">📩 Проверочный код отправлен! Введите полученный 4-значный код:</span>`;
+            statusEl.innerHTML = `<span style="color:var(--primary); font-size:0.85rem;">${this.t('smsDispatchedToPhone', '📲 SMS с 4-значным кодом подтверждения отправлено на номер {phone}. Проверьте сообщения на мобильном телефоне.', { phone: this.formatPhoneNumber(rawPhone) })}</span>`;
         }
 
         const codeInput = document.getElementById('unifiedRegCode');
@@ -1411,6 +1690,7 @@ class CarWashApp {
         if (verifyBtn) verifyBtn.style.display = 'inline-block';
 
         this.showSmsNotification(code, this.formatPhoneNumber(rawPhone));
+        alert(this.t('smsDispatchedToPhone', '📲 SMS с 4-значным кодом подтверждения отправлено на номер {phone}. Проверьте сообщения на мобильном телефоне.', { phone: this.formatPhoneNumber(rawPhone) }));
 
         const sendBtn = document.getElementById('btnSendSmsCode');
         if (sendBtn) {
@@ -1423,7 +1703,7 @@ class CarWashApp {
                 if (sec <= 0) {
                     clearInterval(this._smsCountdown);
                     sendBtn.disabled = false;
-                    sendBtn.textContent = '📲 Отправить код снова';
+                    sendBtn.textContent = this.t('authGetCode', '📲 Получить код');
                 } else {
                     sendBtn.textContent = `Повтор через ${sec}с`;
                 }
@@ -1437,12 +1717,12 @@ class CarWashApp {
         const val = codeInput.value.trim();
 
         if (!this.smsVerification) {
-            alert('Сначала нажмите «Получить код».');
+            alert(this.t('authGetCode', 'Сначала нажмите «Получить код».'));
             return;
         }
 
         if (Date.now() > this.smsVerification.expiresAt) {
-            alert('Время действия кода истекло. Запросите новый код.');
+            alert(this.t('codeExpired', '⚠️ Срок действия кода истек. Запросите код заново.'));
             return;
         }
 
@@ -1450,40 +1730,96 @@ class CarWashApp {
             this.smsVerification.verified = true;
             const statusEl = document.getElementById('codeVerificationStatus');
             if (statusEl) {
-                statusEl.innerHTML = `<span style="color:#059669; font-weight:700; font-size:0.85rem;">✅ Номер телефона успешно подтверждён!</span>`;
+                statusEl.innerHTML = `<span style="color:#059669; font-weight:700; font-size:0.85rem;">${this.t('smsCodeVerified', '✅ Номер телефона успешно подтверждён!')}</span>`;
             }
             codeInput.disabled = true;
             const verifyBtn = document.getElementById('btnVerifyCode');
             if (verifyBtn) verifyBtn.style.display = 'none';
-            alert('✅ Номер подтверждён! Теперь введите пароль и нажмите «Зарегистрироваться».');
+            alert(this.t('smsCodeVerified', '✅ Номер подтверждён! Теперь введите пароль и нажмите «Зарегистрироваться».'));
         } else {
-            alert('❌ Неверный проверочный код. Проверьте код в SMS и повторите ввод.');
+            alert(this.t('codeInvalid', '❌ Неверный проверочный код. Проверьте SMS и повторите ввод.'));
             codeInput.focus();
         }
     }
 
     showSmsNotification(code, formattedPhone, purpose = 'registration') {
         const banner = document.getElementById('smsPushBanner');
-        const codeEl = document.getElementById('smsPushCode');
-        const bodyEl = document.getElementById('smsPushBody');
-        if (!banner || !codeEl) return;
+        if (banner) banner.style.display = 'none';
 
-        codeEl.textContent = code;
-        if (bodyEl) {
-            if (purpose === 'recovery') {
-                bodyEl.innerHTML = `Код сброса пароля: <strong class="sms-push-code">${code}</strong> для CarWash Tracker (${formattedPhone}). Никому не сообщайте его.`;
-            } else {
-                bodyEl.innerHTML = `Ваш проверочный код: <strong class="sms-push-code">${code}</strong> для регистрации в CarWash Tracker (${formattedPhone}). Никому не сообщайте его.`;
-            }
+        console.log(`[SMS Gateway] Dispatched SMS code for ${formattedPhone}. Purpose: ${purpose}`);
+        this.sendRealSms(formattedPhone, code, purpose);
+    }
+
+    async sendRealSms(phone, code, purpose = 'registration') {
+        let cleanPhone = String(phone).replace(/\D/g, '');
+        if (cleanPhone.startsWith('8') && cleanPhone.length === 11) {
+            cleanPhone = '7' + cleanPhone.slice(1);
+        } else if (cleanPhone.length === 10) {
+            cleanPhone = '7' + cleanPhone;
         }
 
-        banner.style.display = 'flex';
-        this.playSmsChime();
+        const gw = this.db.smsGateway || {};
+        const siteName = 'CarWash Tracker';
+        let msgText = '';
 
-        if (this._smsPushTimer) clearTimeout(this._smsPushTimer);
-        this._smsPushTimer = setTimeout(() => {
-            this.hideSmsNotification();
-        }, 15000);
+        if (purpose === 'recovery') {
+            msgText = `${code} — код для сброса пароля в ${siteName}. Не сообщайте его никому.`;
+        } else if (purpose === 'test') {
+            msgText = `Тестовое SMS от ${siteName}! SMS-шлюз успешно настроен и работает.`;
+        } else {
+            msgText = `${code} — ваш проверочный код в ${siteName}.`;
+        }
+
+        console.log(`[SMS Gateway Dispatch] To: +${cleanPhone}, Provider: ${gw.provider || 'none'}`);
+
+        if (gw && gw.provider === 'smsc' && gw.login && gw.password) {
+            try {
+                let url = `https://smsc.kz/sys/send.php?login=${encodeURIComponent(gw.login)}&psw=${encodeURIComponent(gw.password)}&phones=${encodeURIComponent(cleanPhone)}&mes=${encodeURIComponent(msgText)}&fmt=3`;
+                if (gw.sender) {
+                    url += `&sender=${encodeURIComponent(gw.sender)}`;
+                }
+                await fetch(url, { mode: 'no-cors' });
+                try {
+                    const img = new Image();
+                    img.src = url;
+                } catch (e) {}
+                console.log('[SMS Gateway] SMSC.kz request sent successfully.');
+                return { success: true, provider: 'smsc' };
+            } catch (err) {
+                console.warn('[SMS Gateway] SMSC error:', err);
+                try {
+                    const img = new Image();
+                    img.src = `https://smsc.kz/sys/send.php?login=${encodeURIComponent(gw.login)}&psw=${encodeURIComponent(gw.password)}&phones=${encodeURIComponent(cleanPhone)}&mes=${encodeURIComponent(msgText)}&fmt=3`;
+                } catch (e) {}
+                return { success: true, provider: 'smsc-fallback' };
+            }
+        } else if (gw && gw.provider === 'mobizon' && (gw.password || gw.apiKey)) {
+            const key = gw.password || gw.apiKey;
+            try {
+                const url = `https://api.mobizon.kz/service/message/sendsmsmessage?recipient=${encodeURIComponent(cleanPhone)}&text=${encodeURIComponent(msgText)}&apiKey=${encodeURIComponent(key)}`;
+                await fetch(url, { mode: 'no-cors' });
+                console.log('[SMS Gateway] Mobizon request sent successfully.');
+                return { success: true, provider: 'mobizon' };
+            } catch (err) {
+                console.warn('[SMS Gateway] Mobizon error:', err);
+                return { success: false, error: err };
+            }
+        } else if (gw && gw.provider === 'webhook' && gw.webhookUrl) {
+            try {
+                await fetch(gw.webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: cleanPhone, code: code, message: msgText, purpose: purpose })
+                });
+                return { success: true, provider: 'webhook' };
+            } catch (err) {
+                console.warn('[SMS Gateway] Webhook error:', err);
+                return { success: false, error: err };
+            }
+        } else {
+            console.info(`[SMS Gateway Note] SMS шлюз еще не настроен владельцем в Настройках. Проверочный код для +${cleanPhone}: ${code}`);
+            return { success: false, reason: 'not_configured' };
+        }
     }
 
     hideSmsNotification() {
@@ -1582,7 +1918,7 @@ class CarWashApp {
 
         const statusEl = document.getElementById('forgotVerificationStatus');
         if (statusEl) {
-            statusEl.innerHTML = `<span style="color:var(--primary); font-size:0.85rem;">${this.t('smsCodeSent', '📩 Проверочный код отправлен! Введите полученный 4-значный код:')}</span>`;
+            statusEl.innerHTML = `<span style="color:var(--primary); font-size:0.85rem;">${this.t('smsDispatchedToPhone', '📲 SMS с 4-значным кодом подтверждения отправлено на номер {phone}. Проверьте сообщения на мобильном телефоне.', { phone: this.formatPhoneNumber(rawPhone) })}</span>`;
         }
 
         const codeInput = document.getElementById('forgotSmsCode');
@@ -1599,6 +1935,7 @@ class CarWashApp {
         if (newPassBlock) newPassBlock.style.display = 'none';
 
         this.showSmsNotification(code, this.formatPhoneNumber(rawPhone), 'recovery');
+        alert(this.t('smsDispatchedToPhone', '📲 SMS с 4-значным кодом подтверждения отправлено на номер {phone}. Проверьте сообщения на мобильном телефоне.', { phone: this.formatPhoneNumber(rawPhone) }));
 
         const sendBtn = document.getElementById('btnSendForgotCode');
         if (sendBtn) {
@@ -1920,7 +2257,7 @@ class CarWashApp {
 
     // ==================== РОЛИ И UI ====================
 
-    applyRoleUI() {
+    applyRoleUI(skipTabSwitch = false) {
         const badge = document.getElementById('currentRoleBadge');
         const switchBtnText = document.getElementById('switchUserBtnText');
         document.body.className = `role-${this.currentRole}`;
@@ -1948,7 +2285,9 @@ class CarWashApp {
                 if (switchBtnText) switchBtnText.textContent = this.t('loginBtn', '👤 Войти');
             }
             this.updateBookingFormAuthGate();
-            this.switchTab('guestBooking');
+            if (!skipTabSwitch) {
+                this.switchTab('guestBooking');
+            }
         } else if (this.currentRole === 'worker') {
             const worker = this.db.workers.find(w => w.id === this.currentWorkerId);
             const workerName = this.currentUserName || (worker ? worker.name : 'Мойщик');
@@ -1958,7 +2297,9 @@ class CarWashApp {
                 badge.style.color = '#0369a1';
             }
             if (switchBtnText) switchBtnText.textContent = this.t('logoutBtn', '🚪 Выйти ({name})', { name: workerName });
-            this.switchTab('workerTasks');
+            if (!skipTabSwitch) {
+                this.switchTab('workerTasks');
+            }
         } else if (this.currentRole === 'admin') {
             const admin = (this.db.admins || []).find(a => a.id === this.currentAdminId);
             const adminName = this.currentUserName || (admin ? admin.name : 'Администратор');
@@ -1968,7 +2309,9 @@ class CarWashApp {
                 badge.style.color = '#2563eb';
             }
             if (switchBtnText) switchBtnText.textContent = this.t('logoutBtn', '🚪 Выйти ({name})', { name: adminName });
-            this.switchTab('activeOrders');
+            if (!skipTabSwitch) {
+                this.switchTab('activeOrders');
+            }
         } else if (this.currentRole === 'owner') {
             const ownerName = this.currentUserName || 'Алимжан';
             if (badge) {
@@ -1977,7 +2320,9 @@ class CarWashApp {
                 badge.style.color = '#b45309';
             }
             if (switchBtnText) switchBtnText.textContent = this.t('logoutBtn', '🚪 Выйти ({name})', { name: ownerName });
-            this.switchTab('activeOrders');
+            if (!skipTabSwitch) {
+                this.switchTab('activeOrders');
+            }
         }
     }
 
@@ -2235,7 +2580,7 @@ class CarWashApp {
             localStorage.setItem('carwash_lang', lang);
         } catch (e) {}
         this.applyTranslations();
-        this.applyRoleUI();
+        this.applyRoleUI(true);
         this.renderAll();
     }
 
@@ -2252,35 +2597,59 @@ class CarWashApp {
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             if (key) {
-                el.textContent = this.t(key, el.textContent);
+                const val = this.t(key, el.textContent);
+                if (val && val.includes('<') && val.includes('>')) {
+                    el.innerHTML = val;
+                } else {
+                    el.textContent = val;
+                }
             }
         });
+
+        // Все элементы с data-i18n-placeholder
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+            const key = el.getAttribute('data-i18n-placeholder');
+            if (key) {
+                el.setAttribute('placeholder', this.t(key, el.getAttribute('placeholder') || ''));
+            }
+        });
+
+        // Все элементы с data-i18n-title
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+            const key = el.getAttribute('data-i18n-title');
+            if (key) {
+                el.setAttribute('title', this.t(key, el.getAttribute('title') || ''));
+            }
+        });
+
+        const categoryOptions = {
+            sedan: this.t('catSedan', '1 класс — Седан / Хэтчбек'),
+            crossover: this.t('catCrossover', '2 класс — Кроссовер / Универсал'),
+            suv: this.t('catSuv', '3 класс — Внедорожник / Джип'),
+            minivan: this.t('catMinivan', '4 класс — Микроавтобус / Коммерческий')
+        };
 
         // Селект категории в форме бронирования
         const bookingCat = document.getElementById('bookingCategory');
         if (bookingCat) {
-            const cats = {
-                sedan: this.t('catSedan', '1 класс — Седан / Хэтчбек'),
-                crossover: this.t('catCrossover', '2 класс — Кроссовер / Универсал'),
-                suv: this.t('catSuv', '3 класс — Внедорожник / Джип'),
-                minivan: this.t('catMinivan', '4 класс — Микроавтобус / Коммерческий')
-            };
             Array.from(bookingCat.options).forEach(opt => {
-                if (cats[opt.value]) opt.textContent = cats[opt.value];
+                if (categoryOptions[opt.value]) opt.textContent = categoryOptions[opt.value];
             });
         }
 
         // Селект категории в гараже
         const garageCat = document.getElementById('garageCategory');
         if (garageCat) {
-            const cats = {
-                sedan: this.t('catSedan', '1 класс — Седан / Хэтчбек'),
-                crossover: this.t('catCrossover', '2 класс — Кроссовер / Универсал'),
-                suv: this.t('catSuv', '3 класс — Внедорожник / Джип'),
-                minivan: this.t('catMinivan', '4 класс — Микроавтобус / Коммерческий')
-            };
             Array.from(garageCat.options).forEach(opt => {
-                if (cats[opt.value]) opt.textContent = cats[opt.value];
+                if (categoryOptions[opt.value]) opt.textContent = categoryOptions[opt.value];
+            });
+        }
+
+        // Селект категории в прайс-листе
+        const guestPriceCat = document.getElementById('guestPriceCategory');
+        if (guestPriceCat) {
+            Array.from(guestPriceCat.options).forEach(opt => {
+                if (categoryOptions[opt.value]) opt.textContent = categoryOptions[opt.value];
             });
         }
 
@@ -2292,6 +2661,44 @@ class CarWashApp {
 
         const qrCodeHeaderText = document.getElementById('qrCodeHeaderText');
         if (qrCodeHeaderText) qrCodeHeaderText.textContent = this.t('qrBtn', 'QR-код');
+    }
+
+    tService(name) {
+        if (!name) return '';
+        const lang = this.currentLang || 'ru';
+        if (lang === 'ru') return name;
+
+        const map = {
+            'Кузов (бесконтактная)': {
+                kk: 'Шанақ (контактісіз жуу)',
+                en: 'Body Wash (Touchless)'
+            },
+            'Салон (пылесос, влажная)': {
+                kk: 'Салон (шаңсорғыш, ылғалды тазалау)',
+                en: 'Interior (Vacuum & Wet Wipe)'
+            },
+            'Комплекс (кузов + салон)': {
+                kk: 'Кешенді (шанақ + салон)',
+                en: 'Full Complex (Body + Interior)'
+            },
+            'Горячий воск': {
+                kk: 'Ыстық балауыз (воск)',
+                en: 'Hot Wax Protection'
+            },
+            'Чернение резины': {
+                kk: 'Дөңгелектерді қарату',
+                en: 'Tire Shine & Dressing'
+            },
+            'Химчистка багажника': {
+                kk: 'Жүксалғышты химиялық тазалау',
+                en: 'Trunk Detailing'
+            }
+        };
+
+        if (map[name] && map[name][lang]) {
+            return map[name][lang];
+        }
+        return name;
     }
 
     updateBookingFormAuthGate() {
@@ -2716,7 +3123,7 @@ class CarWashApp {
 
         const newOpt = document.createElement('option');
         newOpt.value = 'new';
-        newOpt.textContent = '+ Ввести другой автомобиль...';
+        newOpt.textContent = this.t('bookingNewCar', '+ Ввести другой автомобиль...');
         select.appendChild(newOpt);
 
         if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
@@ -2768,8 +3175,8 @@ class CarWashApp {
             label.innerHTML = `
                 <input type="checkbox" name="bookingServices" value="${s.id}" onchange="app.recalculateBookingTotal()">
                 <div>
-                    <div><strong>${Security.escapeHTML(s.name)}</strong></div>
-                    <small class="text-muted">базовая: ${Number(s.basePrice).toLocaleString()} ₸</small>
+                    <div><strong>${Security.escapeHTML(this.tService(s.name))}</strong></div>
+                    <small class="text-muted">${this.t('basePriceLabel', 'базовая')}: ${Number(s.basePrice).toLocaleString()} ₸</small>
                 </div>
             `;
             container.appendChild(label);
@@ -2969,19 +3376,19 @@ class CarWashApp {
         }
 
         const statusMap = {
-            pending: { label: '⏳ На рассмотрении администратором', class: 'status-pill pending' },
-            waiting: { label: '⏱ В листе ожидания', class: 'status-pill waiting' },
-            confirmed: { label: '✅ Подтверждено администратором', class: 'status-pill confirmed' },
-            'in-progress': { label: '🚿 Автомобиль моется в боксе', class: 'status-pill in-progress' },
-            completed: { label: '🎉 Мойка завершена и оплачена', class: 'status-pill ready' },
-            cancelled: { label: '❌ Заявка отклонена / отменена', class: 'status-pill' }
+            pending: { label: this.t('statusPending', '⏳ На рассмотрении администратором'), class: 'status-pill pending' },
+            waiting: { label: this.t('statusWaiting', '⏱ В листе ожидания'), class: 'status-pill waiting' },
+            confirmed: { label: this.t('statusConfirmed', '✅ Подтверждено администратором'), class: 'status-pill confirmed' },
+            'in-progress': { label: this.t('statusInProgress', '🚿 Автомобиль моется в боксе'), class: 'status-pill in-progress' },
+            completed: { label: this.t('statusCompleted', '🎉 Мойка завершена и оплачена'), class: 'status-pill ready' },
+            cancelled: { label: this.t('statusCancelled', '❌ Заявка отклонена / отменена'), class: 'status-pill' }
         };
 
         myBookings.forEach(b => {
             const statusInfo = statusMap[b.status] || { label: b.status, class: 'status-pill' };
             const serviceNames = (b.services || []).map(sid => {
                 const s = this.db.services.find(srv => srv.id === sid);
-                return s ? Security.escapeHTML(s.name) : '';
+                return s ? Security.escapeHTML(this.tService(s.name)) : '';
             }).filter(Boolean).join(', ');
 
             const box = b.assignedBoxId ? this.db.boxes.find(bx => bx.id === b.assignedBoxId) : null;
@@ -2999,8 +3406,8 @@ class CarWashApp {
                 </div>
                 <div style="font-size:0.95rem; margin:0.5rem 0;">
                     <div>📅 <strong>${b.date} в ${b.time}</strong>${boxLabel}</div>
-                    <div class="text-muted" style="margin-top:0.25rem;">Услуги: ${serviceNames || '—'}</div>
-                    <div style="margin-top:0.25rem;">Сумма: <strong style="color:var(--primary);">${Number(b.totalPrice).toLocaleString()} ₸</strong></div>
+                    <div class="text-muted" style="margin-top:0.25rem;">${this.t('thService', 'Услуги')}: ${serviceNames || '—'}</div>
+                    <div style="margin-top:0.25rem;">${this.t('searchCost', 'Сумма')}: <strong style="color:var(--primary);">${Number(b.totalPrice).toLocaleString()} ₸</strong></div>
                 </div>
                 ${b.status === 'confirmed' ? `
                     <div class="alert-box success" style="margin-top:0.5rem; font-size:0.85rem; padding:0.5rem;">
@@ -3014,7 +3421,7 @@ class CarWashApp {
                 ` : ''}
                 ${b.status === 'pending' || b.status === 'waiting' ? `
                     <div style="margin-top:0.5rem; text-align:right;">
-                        <button class="btn btn-outline btn-sm" type="button" onclick="app.cancelGuestBooking('${b.id}')" style="color:#ef4444; border-color:#fecaca;">Отменить запись</button>
+                        <button class="btn btn-outline btn-sm" type="button" onclick="app.cancelGuestBooking('${b.id}')" style="color:#ef4444; border-color:#fecaca;">${this.t('cancelBookingBtn', 'Отменить запись')}</button>
                     </div>
                 ` : ''}
             `;
@@ -3473,9 +3880,9 @@ class CarWashApp {
         if (!order) {
             resultContainer.innerHTML = `
                 <div style="color: #64748b; text-align: center; padding: 1rem;">
-                    <h3>Автомобиль не найден</h3>
-                    <p>Авто с госномером <strong>${Security.escapeHTML(inputEl.value.toUpperCase())}</strong> сейчас нет в боксах автомойки.</p>
-                    <small>Если вы только что заехали, администратор оформит заказ через минуту.</small>
+                    <h3>${this.t('carNotFoundTitle', 'Автомобиль не найден')}</h3>
+                    <p>${this.t('carNotFoundDesc', 'Авто с госномером {plate} сейчас нет в боксах автомойки.', { plate: `<strong>${Security.escapeHTML(inputEl.value.toUpperCase())}</strong>` })}</p>
+                    <small>${this.t('searchWaitHint', 'Если вы только что заехали, администратор оформит заказ через минуту.')}</small>
                 </div>
             `;
             return;
@@ -3485,7 +3892,7 @@ class CarWashApp {
         const boxName = box ? Security.escapeHTML(box.name) : 'Бокс';
         const serviceNames = order.services.map(sid => {
             const s = this.db.services.find(item => item.id === sid);
-            return s ? Security.escapeHTML(s.name) : '';
+            return s ? Security.escapeHTML(this.tService(s.name)) : '';
         }).filter(Boolean).join(', ');
 
         // Безопасный вывод для гостя (БЕЗ раскрытия телефона клиента и зарплаты)
@@ -3495,16 +3902,16 @@ class CarWashApp {
                 <div class="guest-plate-badge">${Security.escapeHTML(order.carPlate)}</div>
                 <div><strong>${Security.escapeHTML(order.carModel || 'Автомобиль')}</strong></div>
                 <div class="guest-status-banner in-progress">
-                    <span>🚿 Автомобиль моется в <strong>${boxName}</strong></span>
+                    <span>${this.t('searchCarWashing', '🚿 Автомобиль моется в {box}', { box: `<strong>${boxName}</strong>` })}</span>
                 </div>
-                <p><strong>Выполняемые услуги:</strong> ${serviceNames}</p>
-                <p><strong>Стоимость:</strong> ${order.totalPrice.toLocaleString()} ₸</p>
+                <p><strong>${this.t('thService', 'Услуги')}:</strong> ${serviceNames}</p>
+                <p><strong>${this.t('searchCost', 'Стоимость')}:</strong> ${order.totalPrice.toLocaleString()} ₸</p>
                 ${isPaid ? `
                     <div style="background:rgba(16, 185, 129, 0.15); border:1px solid #10b981; color:#059669; padding:0.5rem 0.75rem; border-radius:6px; font-weight:600; margin:0.6rem 0;">
-                        🟢 Заказ уже оплачен! Ожидайте завершения мойки в комнате отдыха.
+                        ${this.t('searchPaidMsg', '🟢 Заказ уже оплачен! Ожидайте завершения мойки в комнате отдыха.')}
                     </div>
                 ` : `
-                    <small class="text-muted">Ожидайте в комнате отдыха. Мы сообщим, когда авто будет готово!</small>
+                    <small class="text-muted">${this.t('searchWaitLounge', 'Ожидайте в комнате отдыха. Мы сообщим, когда авто будет готово!')}</small>
                 `}
             `;
         } else if (order.status === 'ready') {
@@ -3512,23 +3919,23 @@ class CarWashApp {
                 <div class="guest-plate-badge">${Security.escapeHTML(order.carPlate)}</div>
                 <div><strong>${Security.escapeHTML(order.carModel || 'Автомобиль')}</strong></div>
                 <div class="guest-status-banner ready">
-                    <span>✅ Автомобиль вымыт и готов к выдаче! (${boxName})</span>
+                    <span>${this.t('searchCarReady', '✅ Автомобиль вымыт и готов к выдаче! ({box})', { box: boxName })}</span>
                 </div>
-                <p><strong>Услуги:</strong> ${serviceNames}</p>
+                <p><strong>${this.t('thService', 'Услуги')}:</strong> ${serviceNames}</p>
                 ${isPaid ? `
                     <div style="background:rgba(16, 185, 129, 0.15); border:1px solid #10b981; color:#059669; padding:0.5rem 0.75rem; border-radius:6px; font-weight:600; margin:0.6rem 0;">
-                        🟢 Заказ полностью оплачен. Можете забирать ваш чистый автомобиль!
+                        ${this.t('searchPickUpMsg', '🟢 Заказ полностью оплачен. Можете забирать ваш чистый автомобиль!')}
                     </div>
                 ` : `
-                    <p><strong>К оплате:</strong> <strong style="color:var(--primary); font-size:1.2rem;">${order.totalPrice.toLocaleString()} ₸</strong></p>
-                    <small>Вы можете подойти к администратору для расчета и забрать авто.</small>
+                    <p><strong>${this.t('searchToPay', 'К оплате')}:</strong> <strong style="color:var(--primary); font-size:1.2rem;">${order.totalPrice.toLocaleString()} ₸</strong></p>
+                    <small>${this.t('searchGoToAdmin', 'Вы можете подойти к администратору для расчета и забрать авто.')}</small>
                 `}
             `;
         } else if (order.status === 'paid') {
             resultContainer.innerHTML = `
                 <div class="guest-plate-badge">${Security.escapeHTML(order.carPlate)}</div>
                 <div style="color: #10b981; font-weight: 600; padding: 0.5rem 0;">
-                    ✅ Мойка завершена и оплачена. Спасибо, что выбрали нас!
+                    ${this.t('searchWashCompleted', '✅ Мойка завершена и оплачена. Спасибо, что выбрали нас!')}
                 </div>
             `;
         }
@@ -3586,7 +3993,7 @@ class CarWashApp {
             const price = Math.round(s.basePrice * multiplier);
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><strong>${Security.escapeHTML(s.name)}</strong></td>
+                <td><strong>${Security.escapeHTML(this.tService(s.name))}</strong></td>
                 <td><strong style="color:var(--primary);">${price.toLocaleString()} ₸</strong></td>
             `;
             tbody.appendChild(tr);
@@ -3601,9 +4008,9 @@ class CarWashApp {
         const elNotes = document.getElementById('viewContactNotes');
 
         if (elAddr) elAddr.textContent = c.address || 'ул. Автомобильная, 12/1';
-        if (elHours) elHours.textContent = c.hours || 'Круглосуточно 24/7 (без перерывов и выходных)';
+        if (elHours) elHours.textContent = this.t('contactHoursValue', c.hours || 'Круглосуточно 24/7 (без перерывов и выходных)');
         if (elPhone) elPhone.textContent = c.phone || '+7 (777) 123-45-67';
-        if (elNotes) elNotes.textContent = c.notes || 'Зона отдыха, кофе, Wi-Fi';
+        if (elNotes) elNotes.textContent = this.t('contactComfortValue', c.notes || 'Зона отдыха, кофе, Wi-Fi');
 
         // Заполнение в настройках владельца
         const edAddr = document.getElementById('editContactAddress');
@@ -4521,8 +4928,113 @@ class CarWashApp {
             this.renderQrCode(settingsQr, siteUrl, 140);
         }
 
+        // Заполнение настроек SMS-шлюза
+        const gw = this.db.smsGateway || {};
+        const smsProv = document.getElementById('smsProviderSelect');
+        const smsLogin = document.getElementById('smsLoginInput');
+        const smsPass = document.getElementById('smsPasswordInput');
+        const smsSender = document.getElementById('smsSenderInput');
+        if (smsProv) smsProv.value = gw.provider || 'smsc';
+        if (smsLogin) smsLogin.value = gw.login || '';
+        if (smsPass) smsPass.value = gw.password || gw.apiKey || '';
+        if (smsSender) smsSender.value = gw.sender || '';
+        this.onSmsProviderChange();
+
         // Обновление таблицы персонала владельца
         this.renderStaffTable();
+    }
+
+    onSmsProviderChange() {
+        const provEl = document.getElementById('smsProviderSelect');
+        if (!provEl) return;
+        const val = provEl.value;
+
+        const loginGrp = document.getElementById('smsLoginGroup');
+        const loginLabel = document.getElementById('smsLoginLabel');
+        const loginInput = document.getElementById('smsLoginInput');
+        const passLabel = document.getElementById('smsPassLabel');
+        const passInput = document.getElementById('smsPasswordInput');
+        const badge = document.getElementById('smsGatewayStatusBadge');
+
+        if (badge) {
+            badge.textContent = val === 'smsc' ? 'SMSC.kz' : (val === 'mobizon' ? 'Mobizon.kz' : 'Webhook');
+        }
+
+        if (val === 'smsc') {
+            if (loginGrp) loginGrp.style.display = 'block';
+            if (loginLabel) loginLabel.textContent = this.t('smsLoginLabel', 'Логин в SMSC.kz *');
+            if (loginInput) loginInput.placeholder = 'Ваш логин в smsc.kz';
+            if (passLabel) passLabel.textContent = this.t('smsPassLabel', 'Пароль в SMSC.kz *');
+            if (passInput) passInput.placeholder = 'Пароль от smsc.kz';
+        } else if (val === 'mobizon') {
+            if (loginGrp) loginGrp.style.display = 'none';
+            if (passLabel) passLabel.textContent = 'Mobizon API Key *';
+            if (passInput) passInput.placeholder = 'API-ключ из личного кабинета mobizon.kz';
+        } else if (val === 'webhook') {
+            if (loginGrp) loginGrp.style.display = 'none';
+            if (passLabel) passLabel.textContent = 'Webhook URL *';
+            if (passInput) passInput.placeholder = 'https://your-server.com/sms-endpoint';
+        }
+    }
+
+    saveSmsGatewayConfig(event) {
+        if (event) event.preventDefault();
+        if (this.sessionRole !== 'owner') {
+            alert('Настраивать SMS-шлюз может только Владелец автомойки.');
+            return;
+        }
+
+        const prov = document.getElementById('smsProviderSelect').value;
+        const login = (document.getElementById('smsLoginInput').value || '').trim();
+        const pass = (document.getElementById('smsPasswordInput').value || '').trim();
+        const sender = (document.getElementById('smsSenderInput').value || '').trim();
+
+        this.db.smsGateway = {
+            provider: prov,
+            login: login,
+            password: pass,
+            apiKey: pass,
+            webhookUrl: prov === 'webhook' ? pass : '',
+            sender: sender,
+            updatedAt: new Date().toISOString()
+        };
+
+        this.saveDatabase();
+        alert('✅ Настройки SMS-шлюза успешно сохранены и синхронизированы!');
+        const testRes = document.getElementById('smsTestResult');
+        if (testRes) {
+            testRes.innerHTML = `<span style="color:#059669;">✅ Настройки сохранены (${prov.toUpperCase()})</span>`;
+        }
+    }
+
+    async sendTestSms() {
+        if (this.sessionRole !== 'owner') {
+            alert('Только Владелец может отправлять тестовые SMS.');
+            return;
+        }
+
+        const gw = this.db.smsGateway;
+        if (!gw || (!gw.password && !gw.apiKey)) {
+            alert('Пожалуйста, сначала сохраните логин и пароль/ключ SMS-шлюза!');
+            return;
+        }
+
+        const testRes = document.getElementById('smsTestResult');
+        if (testRes) {
+            testRes.innerHTML = `<span style="color:var(--primary);">⏳ Отправка тестового SMS...</span>`;
+        }
+
+        const ownerPhone = this.currentUserPhone || '7765231041';
+        const res = await this.sendRealSms(ownerPhone, '7777', 'test');
+        if (testRes) {
+            if (res && res.success) {
+                testRes.innerHTML = `<span style="color:#059669;">✅ Тестовое SMS отправлено на +${ownerPhone.replace(/\D/g, '')}!</span>`;
+                alert(`✅ Запрос на отправку тестового SMS отправлен на номер +${ownerPhone.replace(/\D/g, '')}! Проверьте ваш телефон.`);
+            } else {
+                testRes.innerHTML = `<span style="color:#ef4444;">❌ Ошибка отправки SMS: ${res.reason || res.error || 'Проверьте данные шлюза'}</span>`;
+                alert(`⚠️ Не удалось отправить SMS: ${res.reason || res.error || 'Проверьте баланс и логин/пароль на SMSC.kz'}`);
+            }
+        }
     }
 
     toggleStaffPercentField() {
@@ -4965,3 +5477,4 @@ class CarWashApp {
 
 // Запуск приложения
 const app = new CarWashApp();
+window.app = app;
