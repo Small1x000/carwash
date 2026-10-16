@@ -20,8 +20,7 @@ const STAFF_SESSION_KEY = 'carwash_staff_session_v2';
 const ACTIVE_TAB_KEY = 'carwash_active_tab_v1';
 
 // Базовый URL облачной синхронизации Firebase (единая база для всех устройств, телефонов и клиентов)
-// Укажите здесь URL вашей базы (например: 'https://my-carwash-rtdb.firebaseio.com')
-const DEFAULT_FIREBASE_URL = '';
+const DEFAULT_FIREBASE_URL = 'https://carwash-d727e-default-rtdb.asia-southeast1.firebasedatabase.app';
 
 // Категории кузова и коэффициенты
 const CATEGORY_MULTIPLIERS = {
@@ -109,7 +108,7 @@ class CarWashApp {
         this.loadClientSession();
         this.initDOM();
         this.initMultiTabSync();
-        this.initCloudSync();
+        await this.initCloudSync();
         this.applyRoleUI();
 
         // Клиенты и гости сайта НЕ должны видеть окно первоначальной настройки.
@@ -134,7 +133,16 @@ class CarWashApp {
                 phone: '+7 (777) 123-45-67',
                 notes: 'Комфортная зона ожидания, зерновой кофе, бесплатный Wi-Fi'
             },
-            auth: null, // Инициализируется при первом запуске
+            auth: {
+                adminHash: "35e849e61e31c820b63ded77d71aeff4baaa79db05e83b052cf19fe810b6d007",
+                adminSalt: "08530c9e13ce0c170ecffa6b54822721",
+                ownerHash: "3a5938d4b46a52b31a7e73620129840ff71bf2a5b6b21190b27dd093044a28f2",
+                ownerSalt: "483d1d8dee3d74d29a03b7b6222ffc3c",
+                recoveryHash: "55ec18c09ab529ee28b061630734cec79e7f174f13a55fb456a9f8fd1f036052",
+                recoverySalt: "257bfad1f66763585c5d286d40a1f599",
+                workerPinHash: "e0ae481c8aed6a4adbce9bd2e35611ef41541c5f5de684fe342518bc337c9287",
+                workerSalt: "ed8b8764eff0edfc377c030e25b69d09"
+            },
             boxes: [
                 { id: 1, name: 'Бокс 1' },
                 { id: 2, name: 'Бокс 2' },
@@ -192,10 +200,13 @@ class CarWashApp {
                 if (!this.db.contacts.hours || this.db.contacts.hours.includes('08:00') || this.db.contacts.hours.includes('23:00')) {
                     this.db.contacts.hours = 'Круглосуточно 24/7 (без перерывов и выходных)';
                 }
-                if (!this.db.cloud) this.db.cloud = { enabled: Boolean(DEFAULT_FIREBASE_URL), firebaseUrl: DEFAULT_FIREBASE_URL || '' };
-                if (DEFAULT_FIREBASE_URL && !this.db.cloud.firebaseUrl) {
+                if (!this.db.cloud) this.db.cloud = {};
+                if (DEFAULT_FIREBASE_URL) {
                     this.db.cloud.firebaseUrl = DEFAULT_FIREBASE_URL;
                     this.db.cloud.enabled = true;
+                }
+                if (!this.db.auth || !this.db.auth.ownerHash) {
+                    this.db.auth = this.getInitialDefaultState().auth;
                 }
 
                 // Гарантируем наличие всех 10 боксов
@@ -282,10 +293,7 @@ class CarWashApp {
 
     loadClientSession() {
         try {
-            // Очищаем устаревший глобальный ключ в localStorage во избежание утечки чужого профиля
-            try { localStorage.removeItem(CLIENT_SESSION_KEY); } catch (e) {}
-
-            const stored = sessionStorage.getItem(CLIENT_SESSION_KEY);
+            const stored = localStorage.getItem(CLIENT_SESSION_KEY) || sessionStorage.getItem(CLIENT_SESSION_KEY);
             if (stored) {
                 const data = JSON.parse(stored);
                 if (data && data.id) {
@@ -304,16 +312,16 @@ class CarWashApp {
     saveClientSession(client) {
         this.currentClient = client || null;
         try {
-            // Гарантированно удаляем из постоянного localStorage
-            localStorage.removeItem(CLIENT_SESSION_KEY);
             if (client && client.id) {
                 const sessionData = {
                     id: client.id,
                     name: client.name,
                     phone: client.phone
                 };
+                localStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(sessionData));
                 sessionStorage.setItem(CLIENT_SESSION_KEY, JSON.stringify(sessionData));
             } else {
+                localStorage.removeItem(CLIENT_SESSION_KEY);
                 sessionStorage.removeItem(CLIENT_SESSION_KEY);
             }
         } catch (e) {}
@@ -348,14 +356,30 @@ class CarWashApp {
 
     // ==================== ОБЛАЧНАЯ СИНХРОНИЗАЦИЯ (МУЛЬТИУСТРОЙСТВО) ====================
 
-    initCloudSync() {
+    async initCloudSync() {
         if (this.cloudSyncInterval) clearInterval(this.cloudSyncInterval);
 
         if (this.db.cloud && this.db.cloud.enabled && this.db.cloud.firebaseUrl) {
             this.updateCloudStatusBadge(true);
-            // Синхронизация каждые 4 секунды
-            this.cloudSyncInterval = setInterval(() => this.pullFromCloud(), 4000);
-            this.pullFromCloud();
+            // Синхронизация каждые 2.5 секунды для мгновенного обновления между устройствами
+            this.cloudSyncInterval = setInterval(() => this.pullFromCloud(), 2500);
+
+            // Мгновенный запрос при переключении на вкладку или возврате на экран
+            if (!this.visibilityListenerAdded) {
+                this.visibilityListenerAdded = true;
+                window.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        this.pullFromCloud();
+                    }
+                });
+                window.addEventListener('focus', () => {
+                    this.pullFromCloud();
+                });
+            }
+
+            try {
+                await this.pullFromCloud();
+            } catch (e) {}
         } else {
             this.updateCloudStatusBadge(false);
         }
@@ -381,6 +405,62 @@ class CarWashApp {
         }
     }
 
+    mergeClients(cloudClients) {
+        if (!Array.isArray(cloudClients)) return;
+        const map = new Map();
+        // 1. Клиенты из облака
+        cloudClients.forEach(c => {
+            if (c && c.id) map.set(c.id, c);
+        });
+        // 2. Локальные клиенты (чтобы недавно зарегистрированный клиент на этом устройстве не затерся)
+        (this.db.clients || []).forEach(c => {
+            if (c && c.id) {
+                if (!map.has(c.id)) {
+                    map.set(c.id, c);
+                } else {
+                    const existing = map.get(c.id);
+                    const localCars = Array.isArray(c.cars) ? c.cars : [];
+                    const cloudCars = Array.isArray(existing.cars) ? existing.cars : [];
+                    const carMap = new Map();
+                    cloudCars.forEach(car => { if (car && car.plate) carMap.set(car.plate.replace(/\s+/g, ''), car); });
+                    localCars.forEach(car => { if (car && car.plate) carMap.set(car.plate.replace(/\s+/g, ''), car); });
+                    map.set(c.id, {
+                        ...existing,
+                        ...c,
+                        cars: Array.from(carMap.values())
+                    });
+                }
+            }
+        });
+        this.db.clients = Array.from(map.values());
+    }
+
+    mergeBookings(cloudBookings) {
+        if (!Array.isArray(cloudBookings)) return;
+        const map = new Map();
+        // 1. Локальные брони
+        (this.db.bookings || []).forEach(b => {
+            if (b && b.id) map.set(b.id, b);
+        });
+        // 2. Облачные брони
+        cloudBookings.forEach(b => {
+            if (b && b.id) {
+                if (!map.has(b.id)) {
+                    map.set(b.id, b);
+                } else {
+                    const local = map.get(b.id);
+                    map.set(b.id, { ...local, ...b });
+                }
+            }
+        });
+        // Новые заявки всегда сверху
+        this.db.bookings = Array.from(map.values()).sort((a, b) => {
+            const timeA = new Date(a.createdAt || 0).getTime();
+            const timeB = new Date(b.createdAt || 0).getTime();
+            return timeB - timeA;
+        });
+    }
+
     async pullFromCloud() {
         if (!this.db.cloud || !this.db.cloud.enabled || !this.db.cloud.firebaseUrl || this.isSyncing) return;
         try {
@@ -389,24 +469,40 @@ class CarWashApp {
             if (!response.ok) return;
 
             const cloudData = await response.json();
-            if (cloudData && cloudData.orders && cloudData.updatedAt) {
-                // Если облачные данные новее локальных
+            if (cloudData && typeof cloudData === 'object') {
+                // Всегда гарантированно объединяем клиентов и заявки на бронирование
+                if (Array.isArray(cloudData.clients)) {
+                    this.mergeClients(cloudData.clients);
+                }
+                if (Array.isArray(cloudData.bookings)) {
+                    this.mergeBookings(cloudData.bookings);
+                }
+
                 if (!this.db.lastCloudUpdate || cloudData.updatedAt > this.db.lastCloudUpdate) {
-                    this.db.orders = cloudData.orders || [];
-                    this.db.boxes = cloudData.boxes || this.db.boxes;
-                    this.db.services = cloudData.services || this.db.services;
+                    if (Array.isArray(cloudData.orders)) this.db.orders = cloudData.orders;
+                    if (Array.isArray(cloudData.boxes) && cloudData.boxes.length > 0) this.db.boxes = cloudData.boxes;
+                    if (Array.isArray(cloudData.services) && cloudData.services.length > 0) this.db.services = cloudData.services;
                     if (Array.isArray(cloudData.workers) && cloudData.workers.length > 0) this.db.workers = cloudData.workers;
-                    if (Array.isArray(cloudData.clients)) this.db.clients = cloudData.clients;
-                    if (Array.isArray(cloudData.bookings)) this.db.bookings = cloudData.bookings;
                     if (Array.isArray(cloudData.admins) && cloudData.admins.length > 0) this.db.admins = cloudData.admins;
                     if (cloudData.contacts) this.db.contacts = cloudData.contacts;
                     if (cloudData.auth && cloudData.auth.ownerHash) {
                         this.db.auth = cloudData.auth;
                     }
                     this.db.lastCloudUpdate = cloudData.updatedAt;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.db));
-                    this.renderAll();
                 }
+
+                // Синхронизируем текущего авторизованного клиента с обновленными данными
+                if (this.currentClient && this.currentClient.id) {
+                    const refreshed = (this.db.clients || []).find(c => c.id === this.currentClient.id);
+                    if (refreshed) {
+                        this.currentClient = refreshed;
+                    }
+                }
+
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(this.db));
+                this.renderAll();
+            } else if (cloudData === null && this.db.auth && this.db.auth.ownerHash) {
+                this.pushToCloud();
             }
         } catch (e) {
             // Игнорируем сетевые сбои в фоне
@@ -418,6 +514,49 @@ class CarWashApp {
         try {
             this.isSyncing = true;
             const url = this.db.cloud.firebaseUrl.replace(/\/$/, '') + '/carwash_sync.json';
+            const isStaff = (this.sessionRole === 'owner' || this.sessionRole === 'admin' || this.sessionRole === 'worker');
+
+            // Клиенты и гости: отправляют ТОЛЬКО свои заявки на бронь и профиль, не затрагивая пароли и боксы
+            if (!isStaff) {
+                try {
+                    const checkRes = await fetch(url);
+                    if (checkRes.ok) {
+                        const checkData = await checkRes.json();
+                        if (checkData) {
+                            if (Array.isArray(checkData.clients)) this.mergeClients(checkData.clients);
+                            if (Array.isArray(checkData.bookings)) this.mergeBookings(checkData.bookings);
+                        }
+                    }
+                } catch (e) {}
+
+                const clientPayload = {
+                    clients: this.db.clients || [],
+                    bookings: this.db.bookings || [],
+                    updatedAt: Date.now()
+                };
+                this.db.lastCloudUpdate = clientPayload.updatedAt;
+
+                await fetch(url, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(clientPayload)
+                });
+                return;
+            }
+
+            // Для персонала (Владелец/Администратор/Мойщик):
+            // Подтягиваем свежие заявки клиентов перед отправкой
+            try {
+                const checkRes = await fetch(url);
+                if (checkRes.ok) {
+                    const checkData = await checkRes.json();
+                    if (checkData) {
+                        if (Array.isArray(checkData.clients)) this.mergeClients(checkData.clients);
+                        if (Array.isArray(checkData.bookings)) this.mergeBookings(checkData.bookings);
+                    }
+                }
+            } catch (e) {}
+
             const payload = {
                 orders: this.db.orders,
                 boxes: this.db.boxes,
@@ -427,12 +566,17 @@ class CarWashApp {
                 clients: this.db.clients || [],
                 bookings: this.db.bookings || [],
                 admins: (this.db.admins || []).map(a => ({ id: a.id, name: a.name })),
-                auth: this.db.auth || null,
                 updatedAt: Date.now()
             };
+
+            // Пароли и безопасность отправляются в облако ТОЛЬКО авторизованным владельцем
+            if (this.sessionRole === 'owner' && this.db.auth && this.db.auth.ownerHash) {
+                payload.auth = this.db.auth;
+            }
+
             this.db.lastCloudUpdate = payload.updatedAt;
             await fetch(url, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
@@ -552,6 +696,11 @@ class CarWashApp {
 
     async submitInitialSetup(event) {
         event.preventDefault();
+        if (this.db.auth && this.db.auth.ownerHash) {
+            alert('⚠️ Первоначальная настройка уже завершена. Изменение паролей доступно только владельцу в панели управления.');
+            this.closeFirstRunModal();
+            return;
+        }
         const ownerPass = document.getElementById('initOwnerPass').value;
         const adminPass = document.getElementById('initAdminPass').value;
         const workerPin = document.getElementById('initWorkerPin').value;
@@ -1826,6 +1975,17 @@ class CarWashApp {
         if (filterPendingCount) filterPendingCount.textContent = pendingCount;
         if (filterWaitlistCount) filterWaitlistCount.textContent = waitlistCount;
         if (filterConfirmedCount) filterConfirmedCount.textContent = confirmedCount;
+
+        const banner = document.getElementById('newBookingsAlertBanner');
+        const bannerCount = document.getElementById('alertBannerCount');
+        if (banner) {
+            if (pendingCount > 0) {
+                banner.style.display = 'flex';
+                if (bannerCount) bannerCount.textContent = pendingCount;
+            } else {
+                banner.style.display = 'none';
+            }
+        }
 
         const filterEl = document.getElementById('adminBookingStatusFilter');
         const filter = filterEl ? filterEl.value : 'pending';

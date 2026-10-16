@@ -1180,3 +1180,22 @@ input:focus, select:focus {
     border: 1px solid #86efac;
     color: #166534;
 }
+
+.new-bookings-banner {
+    background: #fef3c7;
+    border: 2px solid #f59e0b;
+    border-radius: var(--radius);
+    padding: 0.85rem 1.25rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+    transition: all 0.2s;
+}
+
+.new-bookings-banner:hover {
+    background: #fde68a;
+    border-color: #d97706;
+}

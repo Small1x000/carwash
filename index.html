@@ -400,6 +400,18 @@
                     <span class="text-muted">Нажмите на свободный бокс для быстрого запуска авто</span>
                 </div>
 
+                <!-- Баннер новых онлайн-заявок для администратора и владельца -->
+                <div id="newBookingsAlertBanner" class="new-bookings-banner" style="display:none;" onclick="app.switchTab('adminBookings')">
+                    <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <span style="font-size:1.5rem;">🔔</span>
+                        <div>
+                            <strong style="color:#92400e; font-size:1rem;">Новые онлайн-заявки на бронь!</strong>
+                            <p style="margin:0; font-size:0.85rem; color:#b45309;"><span id="alertBannerCount">0</span> машин(ы) ожидают подтверждения администратора</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-warning btn-sm" type="button" style="pointer-events:none;">Перейти к заявкам →</button>
+                </div>
+
                 <div class="boxes-grid ten-boxes-grid" id="boxesContainer">
                     <!-- Все 10 боксов -->
                 </div>
