@@ -101,6 +101,7 @@ class CarWashApp {
     }
 
     async init() {
+        this.initTheme();
         const loaded = this.loadDatabase();
         if (!loaded) return;
 
@@ -1263,6 +1264,204 @@ class CarWashApp {
         }
         this.renderAvailableTimeSlots();
         this.initPhoneMasks();
+        this.updateThemeButton();
+    }
+
+    // ==================== ТЕМА ОФОРМЛЕНИЯ (СВЕТЛАЯ / ТЕМНАЯ) ====================
+
+    initTheme() {
+        const savedTheme = localStorage.getItem('carwash_theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        this.theme = savedTheme || (prefersDark ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', this.theme);
+    }
+
+    toggleTheme() {
+        this.theme = this.theme === 'dark' ? 'light' : 'dark';
+        try {
+            localStorage.setItem('carwash_theme', this.theme);
+        } catch (e) {}
+        document.documentElement.setAttribute('data-theme', this.theme);
+        this.updateThemeButton();
+    }
+
+    updateThemeButton() {
+        const btn = document.getElementById('themeToggleBtn');
+        if (!btn) return;
+        if (this.theme === 'dark') {
+            btn.innerHTML = '☀️ <span class="hide-mobile">Светлая</span>';
+            btn.title = 'Включить светлую тему оформления';
+        } else {
+            btn.innerHTML = '🌙 <span class="hide-mobile">Темная</span>';
+            btn.title = 'Включить темную тему оформления';
+        }
+    }
+
+    // ==================== QR-КОД САЙТА ДЛЯ КЛИЕНТОВ И ПЕЧАТЬ ====================
+
+    openQrModal() {
+        const siteUrl = window.location.href.split('#')[0];
+        const container = document.getElementById('modalQrCodeContainer');
+        const textEl = document.getElementById('modalSiteUrlText');
+        if (textEl) textEl.textContent = siteUrl;
+        if (container) {
+            this.renderQrCode(container, siteUrl, 220);
+        }
+        document.getElementById('qrModal').classList.add('open');
+    }
+
+    closeQrModal() {
+        document.getElementById('qrModal').classList.remove('open');
+    }
+
+    copySiteUrl() {
+        const siteUrl = window.location.href.split('#')[0];
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(siteUrl).then(() => {
+                alert('📋 Ссылка на автомойку скопирована в буфер обмена!\n\n' + siteUrl);
+            }).catch(() => {
+                prompt('Скопируйте ссылку на автомойку:', siteUrl);
+            });
+        } else {
+            prompt('Скопируйте ссылку на автомойку:', siteUrl);
+        }
+    }
+
+    renderQrCode(container, url, size = 220) {
+        if (!container) return;
+        container.innerHTML = '';
+        const encoded = encodeURIComponent(url);
+
+        const img = document.createElement('img');
+        img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encoded}`;
+        img.alt = 'QR-код автомойки';
+        img.style.width = `${size}px`;
+        img.style.height = `${size}px`;
+        img.style.display = 'block';
+        img.style.borderRadius = '8px';
+
+        img.onerror = () => {
+            container.innerHTML = `
+                <div style="width:${size}px; height:${size}px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--bg-page); color:var(--text-muted); font-size:0.85rem; padding:0.5rem; text-align:center; border-radius:8px;">
+                    <span style="font-size:2rem; margin-bottom:0.25rem;">📱</span>
+                    <strong>Ссылка на сайт:</strong>
+                    <div style="word-break:break-all; font-size:0.75rem; margin-top:0.25rem;">${Security.escapeHTML(url)}</div>
+                </div>
+            `;
+        };
+
+        container.appendChild(img);
+    }
+
+    printQrFlyer() {
+        const siteUrl = window.location.href.split('#')[0];
+        const encoded = encodeURIComponent(siteUrl);
+        const contacts = this.db.contacts || {};
+        const address = contacts.address || 'ул. Автомобильная, 12/1';
+        const hours = contacts.hours || 'Круглосуточно 24/7 (без перерывов и выходных)';
+        const phone = contacts.phone || '+7 (777) 123-45-67';
+
+        const printWin = window.open('', '_blank');
+        if (!printWin) {
+            alert('Пожалуйста, разрешите открытие всплывающих окон в браузере, чтобы распечатать плакат.');
+            return;
+        }
+
+        printWin.document.write(`
+            <!DOCTYPE html>
+            <html lang="ru">
+            <head>
+                <meta charset="UTF-8">
+                <title>QR-код автомойки — CarWash Tracker</title>
+                <style>
+                    @page { size: A4 portrait; margin: 1.2cm; }
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                        text-align: center;
+                        color: #0f172a;
+                        padding: 1.5rem 1rem;
+                        background: #ffffff;
+                    }
+                    .flyer-card {
+                        border: 3px solid #2563eb;
+                        border-radius: 24px;
+                        padding: 2rem 1.5rem;
+                        max-width: 580px;
+                        margin: 0 auto;
+                        box-shadow: 0 10px 25px rgba(37, 99, 235, 0.1);
+                    }
+                    .logo-icon { font-size: 3.5rem; margin-bottom: 0.25rem; }
+                    h1 { font-size: 2.3rem; margin: 0 0 0.4rem; color: #1e3a8a; }
+                    .badge-hours {
+                        display: inline-block;
+                        background: #059669;
+                        color: #ffffff;
+                        font-weight: 700;
+                        font-size: 1rem;
+                        padding: 0.35rem 1rem;
+                        border-radius: 9999px;
+                        margin-bottom: 1.25rem;
+                    }
+                    .qr-box {
+                        background: #f8fafc;
+                        display: inline-block;
+                        padding: 1.25rem;
+                        border-radius: 20px;
+                        border: 2px dashed #93c5fd;
+                        margin: 0.5rem 0 1rem;
+                    }
+                    .qr-box img { width: 280px; height: 280px; display: block; border-radius: 10px; }
+                    .cta-text { font-size: 1.35rem; font-weight: 800; color: #2563eb; margin: 0.5rem 0; }
+                    .features-list {
+                        font-size: 1.05rem;
+                        color: #334155;
+                        text-align: left;
+                        display: inline-block;
+                        line-height: 1.8;
+                        margin: 0.75rem 0 1rem;
+                    }
+                    .contacts-footer {
+                        border-top: 1px solid #cbd5e1;
+                        padding-top: 1rem;
+                        margin-top: 1rem;
+                        font-size: 0.95rem;
+                        color: #475569;
+                    }
+                    .contacts-footer strong { color: #0f172a; }
+                </style>
+            </head>
+            <body>
+                <div class="flyer-card">
+                    <div class="logo-icon">🚗💦</div>
+                    <h1>CarWash Tracker</h1>
+                    <div class="badge-hours">🕒 \${Security.escapeHTML(hours)}</div>
+
+                    <div class="cta-text">📲 Наведите камеру телефона на QR-код</div>
+                    <div class="qr-box">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=8&data=\${encoded}" alt="QR код для клиентов" />
+                    </div>
+
+                    <div class="features-list">
+                        <div>✅ Онлайн-бронирование бокса без очередей</div>
+                        <div>✅ Отслеживание готовности авто в боксе онлайн</div>
+                        <div>✅ Личный кабинет и история обслуживания</div>
+                    </div>
+
+                    <div class="contacts-footer">
+                        <p>📍 <strong>Адрес:</strong> \${Security.escapeHTML(address)}</p>
+                        <p>📞 <strong>Телефон для справок:</strong> \${Security.escapeHTML(phone)}</p>
+                        <p style="font-size:0.85rem; color:#64748b; margin-top:0.4rem;">\${Security.escapeHTML(siteUrl)}</p>
+                    </div>
+                </div>
+                <script>
+                    window.onload = function() {
+                        setTimeout(function() { window.print(); }, 500);
+                    };
+                <\/script>
+            </body>
+            </html>
+        `);
+        printWin.document.close();
     }
 
     renderAll() {
@@ -2249,6 +2448,7 @@ class CarWashApp {
                 services: booking.services || [],
                 totalPrice: booking.totalPrice,
                 status: 'in-progress',
+                isPaid: false,
                 paymentMethod: null,
                 createdAt: new Date().toISOString(),
                 paidAt: null
@@ -2334,6 +2534,7 @@ class CarWashApp {
             services: booking.services || [],
             totalPrice: booking.totalPrice,
             status: 'in-progress',
+            isPaid: false,
             paymentMethod: null,
             createdAt: new Date().toISOString(),
             paidAt: null
@@ -2395,6 +2596,7 @@ class CarWashApp {
         }).filter(Boolean).join(', ');
 
         // Безопасный вывод для гостя (БЕЗ раскрытия телефона клиента и зарплаты)
+        const isPaid = this.isOrderPaid(order);
         if (order.status === 'in-progress') {
             resultContainer.innerHTML = `
                 <div class="guest-plate-badge">${Security.escapeHTML(order.carPlate)}</div>
@@ -2404,7 +2606,13 @@ class CarWashApp {
                 </div>
                 <p><strong>Выполняемые услуги:</strong> ${serviceNames}</p>
                 <p><strong>Стоимость:</strong> ${order.totalPrice.toLocaleString()} ₸</p>
-                <small class="text-muted">Ожидайте в комнате отдыха. Мы сообщим, когда авто будет готово!</small>
+                ${isPaid ? `
+                    <div style="background:rgba(16, 185, 129, 0.15); border:1px solid #10b981; color:#059669; padding:0.5rem 0.75rem; border-radius:6px; font-weight:600; margin:0.6rem 0;">
+                        🟢 Заказ уже оплачен! Ожидайте завершения мойки в комнате отдыха.
+                    </div>
+                ` : `
+                    <small class="text-muted">Ожидайте в комнате отдыха. Мы сообщим, когда авто будет готово!</small>
+                `}
             `;
         } else if (order.status === 'ready') {
             resultContainer.innerHTML = `
@@ -2414,8 +2622,14 @@ class CarWashApp {
                     <span>✅ Автомобиль вымыт и готов к выдаче! (${boxName})</span>
                 </div>
                 <p><strong>Услуги:</strong> ${serviceNames}</p>
-                <p><strong>К оплате:</strong> <strong style="color:var(--primary); font-size:1.2rem;">${order.totalPrice.toLocaleString()} ₸</strong></p>
-                <small>Вы можете подойти к администратору для расчета и забрать авто.</small>
+                ${isPaid ? `
+                    <div style="background:rgba(16, 185, 129, 0.15); border:1px solid #10b981; color:#059669; padding:0.5rem 0.75rem; border-radius:6px; font-weight:600; margin:0.6rem 0;">
+                        🟢 Заказ полностью оплачен. Можете забирать ваш чистый автомобиль!
+                    </div>
+                ` : `
+                    <p><strong>К оплате:</strong> <strong style="color:var(--primary); font-size:1.2rem;">${order.totalPrice.toLocaleString()} ₸</strong></p>
+                    <small>Вы можете подойти к администратору для расчета и забрать авто.</small>
+                `}
             `;
         } else if (order.status === 'paid') {
             resultContainer.innerHTML = `
@@ -2561,15 +2775,19 @@ class CarWashApp {
                 const percent = order.workerPercentSnapshot !== undefined ? order.workerPercentSnapshot : (worker ? worker.percent : 30);
                 const earnedForOrder = order.workerSalaryEarned !== undefined ? order.workerSalaryEarned : Math.round(order.totalPrice * (percent / 100));
 
+                const isPaid = this.isOrderPaid(order);
                 const card = document.createElement('div');
                 card.className = `worker-task-card ${order.status}`;
                 card.innerHTML = `
                     <div>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
                             <span class="badge" style="background:#0f172a; color:#fff; font-size:0.9rem;">${box ? Security.escapeHTML(box.name) : 'Бокс'}</span>
-                            <span class="status-pill ${order.status}">
-                                ${order.status === 'in-progress' ? '🚿 В процессе' : '✅ Готово'}
-                            </span>
+                            <div style="display:flex; gap:0.35rem; align-items:center;">
+                                <span class="status-pill ${order.status}">
+                                    ${order.status === 'in-progress' ? '🚿 В процессе' : '✅ Готово'}
+                                </span>
+                                ${isPaid ? `<span class="badge" style="background:#059669; color:#fff; font-size:0.75rem;">🟢 Оплачено</span>` : ''}
+                            </div>
                         </div>
                         <h3 style="font-size:1.3rem; margin:0.3rem 0;">${Security.escapeHTML(order.carPlate)}</h3>
                         <div class="text-muted">${Security.escapeHTML(order.carModel || 'Автомобиль')}</div>
@@ -2587,7 +2805,7 @@ class CarWashApp {
                             </button>
                         ` : `
                             <div style="text-align:center; color:#15803d; font-weight:600; font-size:0.9rem;">
-                                Ожидает оплаты у администратора
+                                ${isPaid ? '🎉 Мойка завершена (Оплачено клиентом)' : 'Ожидает оплаты у администратора'}
                             </div>
                         `}
                     </div>
@@ -2728,13 +2946,34 @@ class CarWashApp {
             `;
 
             if (isBusy) {
+                const isPaid = this.isOrderPaid(activeOrder);
                 cardContent += `
                     <div class="box-car-info">${Security.escapeHTML(activeOrder.carPlate)}</div>
                     <div class="box-details">${Security.escapeHTML(activeOrder.carModel || 'Авто')} • ${Security.escapeHTML(this.getWorkerName(activeOrder.workerId))}</div>
-                    <div style="margin-top: 0.5rem;">
+                    <div style="margin-top: 0.5rem; display:flex; gap:0.35rem; align-items:center; flex-wrap:wrap;">
                         <span class="status-pill ${activeOrder.status}">
                             ${activeOrder.status === 'in-progress' ? '🚿 Моется' : '✅ Помыта'}
                         </span>
+                        ${isPaid ? `
+                            <span class="badge" style="background:#059669; color:#fff; font-size:0.75rem;">
+                                🟢 Оплачено
+                            </span>
+                        ` : `
+                            <span class="badge" style="background:#b45309; color:#fff; font-size:0.75rem;">
+                                ⏳ Ждет оплаты
+                            </span>
+                        `}
+                    </div>
+                    <div style="margin-top:0.5rem; display:flex; gap:0.35rem; flex-wrap:wrap;">
+                        ${activeOrder.status === 'in-progress' ? `
+                            <button class="btn btn-outline btn-xs" type="button" onclick="app.setOrderReady('${activeOrder.id}')" style="flex:1;">✅ Готово</button>
+                        ` : ''}
+                        ${!isPaid ? `
+                            <button class="btn btn-success btn-xs" type="button" onclick="app.openPaymentModal('${activeOrder.id}')" style="flex:1;">💳 Оплата</button>
+                        ` : ''}
+                        ${(activeOrder.status === 'ready' && isPaid) ? `
+                            <button class="btn btn-primary btn-xs" type="button" onclick="app.releaseOrder('${activeOrder.id}')" style="width:100%;">👋 Выдать авто</button>
+                        ` : ''}
                     </div>
                 `;
 
@@ -2940,6 +3179,7 @@ class CarWashApp {
             services: selectedServices,
             totalPrice,
             status: 'in-progress',
+            isPaid: false,
             paymentMethod: null,
             createdAt: new Date().toISOString(),
             paidAt: null
@@ -2967,7 +3207,7 @@ class CarWashApp {
         document.getElementById('activeCount').textContent = totalActiveAndQueue;
 
         if (totalActiveAndQueue === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding:2rem;">Сейчас нет машин в боксах. Нажмите «Оформить заезд» или подтвердите онлайн-бронь.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#94a3b8; padding:2rem;">Сейчас нет машин в боксах. Нажмите «Оформить заезд» или подтвердите онлайн-бронь.</td></tr>`;
             return;
         }
 
@@ -2979,6 +3219,9 @@ class CarWashApp {
                 return s ? Security.escapeHTML(s.name) : '';
             }).filter(Boolean).join(', ');
 
+            const isPaid = this.isOrderPaid(order);
+            const payMethodName = this.getPaymentMethodName(order.paymentMethod);
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><strong>${index + 1}</strong></td>
@@ -2987,24 +3230,44 @@ class CarWashApp {
                     <div class="text-muted" style="font-size:0.8rem;">${Security.escapeHTML(order.carModel || 'Не указана')}</div>
                 </td>
                 <td>${box ? Security.escapeHTML(box.name) : '—'}</td>
-                <td style="max-width:250px;">${serviceNames}</td>
+                <td style="max-width:240px;">${serviceNames}</td>
                 <td>${Security.escapeHTML(workerName)}</td>
                 <td><strong>${Number(order.totalPrice).toLocaleString()} ₸</strong></td>
                 <td>
                     <span class="status-pill ${order.status}">
-                        ${order.status === 'in-progress' ? '🚿 В работе' : '✅ Готово'}
+                        ${order.status === 'in-progress' ? '🚿 В работе' : '✅ Помыта'}
                     </span>
                 </td>
                 <td>
-                    <div style="display: flex; gap: 0.4rem;">
+                    ${isPaid ? `
+                        <span class="badge" style="background:#059669; color:#fff; font-size:0.75rem;" title="Оплачено ${order.paidAt ? new Date(order.paidAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : ''}">
+                            🟢 ${payMethodName}
+                        </span>
+                    ` : `
+                        <span class="badge" style="background:#b45309; color:#fff; font-size:0.75rem;">
+                            ⏳ Не оплачен
+                        </span>
+                    `}
+                </td>
+                <td>
+                    <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;">
                         ${order.status === 'in-progress' ? `
-                            <button class="btn btn-outline btn-sm" type="button" onclick="app.setOrderReady('${order.id}')" title="Отметить как готово">
+                            <button class="btn btn-outline btn-sm" type="button" onclick="app.setOrderReady('${order.id}')" title="Отметить завершение мойки">
                                 ✅ Готово
                             </button>
                         ` : ''}
-                        <button class="btn btn-success btn-sm" type="button" onclick="app.openPaymentModal('${order.id}')">
-                            💳 Оплата
-                        </button>
+
+                        ${!isPaid ? `
+                            <button class="btn btn-success btn-sm" type="button" onclick="app.openPaymentModal('${order.id}')" title="Принять оплату">
+                                💳 Оплата
+                            </button>
+                        ` : ''}
+
+                        ${(order.status === 'ready' && isPaid) ? `
+                            <button class="btn btn-primary btn-sm" type="button" onclick="app.releaseOrder('${order.id}')" title="Выдать авто клиенту и освободить бокс">
+                                👋 Выдать авто
+                            </button>
+                        ` : ''}
                     </div>
                 </td>
             `;
@@ -3029,11 +3292,14 @@ class CarWashApp {
                     <div class="text-muted" style="font-size:0.8rem;">${Security.escapeHTML(b.carModel || 'Авто')} (🕒 ${Security.escapeHTML(b.time || '—')})</div>
                 </td>
                 <td><strong>${box ? Security.escapeHTML(box.name) : '—'}</strong></td>
-                <td style="max-width:250px;">${serviceNames || '—'}</td>
+                <td style="max-width:240px;">${serviceNames || '—'}</td>
                 <td>${Security.escapeHTML(workerName)}</td>
                 <td><strong>${Number(b.totalPrice).toLocaleString()} ₸</strong></td>
                 <td>
                     <span class="status-pill waiting">⏳ В очереди</span>
+                </td>
+                <td>
+                    <span class="text-muted" style="font-size:0.8rem;">При заезде</span>
                 </td>
                 <td>
                     <button class="btn btn-primary btn-sm" type="button" onclick="app.startBookingInBay('${b.id}')">
@@ -3043,6 +3309,20 @@ class CarWashApp {
             `;
             tbody.appendChild(tr);
         });
+    }
+
+    isOrderPaid(order) {
+        return Boolean(order && (order.isPaid || order.status === 'paid'));
+    }
+
+    getPaymentMethodName(method) {
+        const map = {
+            cash: 'Наличные',
+            card: 'Карта / POS',
+            transfer: 'Kaspi / QR',
+            kaspi: 'Kaspi / QR'
+        };
+        return map[method] || method || 'Оплачено';
     }
 
     setOrderReady(orderId) {
@@ -3056,6 +3336,21 @@ class CarWashApp {
         }
 
         order.status = 'ready';
+
+        // Если авто УЖЕ ОПЛАЧЕНО клиентом заранее:
+        if (this.isOrderPaid(order)) {
+            const box = this.db.boxes.find(b => b.id === order.boxId);
+            const boxName = box ? box.name : 'Бокс';
+            const payName = this.getPaymentMethodName(order.paymentMethod);
+            const wantRelease = confirm(`✅ Мойка авто ${order.carPlate} завершена!\n\nАвтомобиль уже был оплачен ранее (${payName}).\n\nВыдать автомобиль клиенту и освободить ${boxName}?`);
+            if (wantRelease) {
+                this.finishOrder(order);
+                return;
+            }
+        } else {
+            alert(`✅ Автомобиль ${order.carPlate} помыт и готов к выдаче!\nОжидает оплаты у администратора.`);
+        }
+
         this.saveDatabase();
         this.renderAll();
     }
@@ -3066,7 +3361,7 @@ class CarWashApp {
         const order = this.db.orders.find(o => String(o.id) === String(orderId));
         if (!order) return;
 
-        if (order.status === 'paid') {
+        if (this.isOrderPaid(order)) {
             alert('Этот заказ уже был оплачен ранее.');
             return;
         }
@@ -3093,27 +3388,58 @@ class CarWashApp {
             const checkedMethod = document.querySelector('input[name="payMethod"]:checked');
             const method = checkedMethod ? checkedMethod.value : 'cash';
 
-            order.status = 'paid';
+            order.isPaid = true;
             order.paymentMethod = method;
             order.paidAt = new Date().toISOString();
 
-            // Гарантируем расчет и фиксацию зарплаты мойщика в заказе
+            // Фиксируем зарплату мойщика
             const percent = order.workerPercentSnapshot || 30;
             order.workerSalaryEarned = Math.round(order.totalPrice * (percent / 100));
 
-            // Завершаем связанную онлайн-бронь, если есть
-            if (Array.isArray(this.db.bookings)) {
-                const linkedBooking = this.db.bookings.find(b => b.orderId === order.id);
-                if (linkedBooking) {
-                    linkedBooking.status = 'completed';
-                }
+            const payName = this.getPaymentMethodName(method);
+
+            // Если машина ЕЩЁ МОЕТСЯ (status === 'in-progress'):
+            // Машина остается в боксе! НЕ освобождаем бокс!
+            if (order.status === 'in-progress') {
+                this.saveDatabase();
+                this.closePaymentModal();
+                this.renderAll();
+                alert(`💳 Оплата за авто ${order.carPlate} успешно принята (${payName})!\n\n🚿 Автомобиль продолжает мыться в боксе. Когда мойка будет окончена, нажмите «Готово», чтобы выдать машину.`);
+                return;
             }
 
-            this.saveDatabase();
-            this.closePaymentModal();
-            this.renderAll();
-            alert(`✅ Заказ ${order.carPlate} успешно оплачен и закрыт!`);
+            // Если машина УЖЕ БЫЛА ПОМЫТА (status === 'ready'):
+            // Теперь выполнены оба условия (помыта И оплачена) — закрываем заказ и освобождаем бокс!
+            this.finishOrder(order);
         }
+    }
+
+    finishOrder(order) {
+        order.status = 'paid';
+        order.isPaid = true;
+        if (!order.paidAt) order.paidAt = new Date().toISOString();
+
+        // Завершаем связанную онлайн-бронь, если есть
+        if (Array.isArray(this.db.bookings)) {
+            const linkedBooking = this.db.bookings.find(b => b.orderId === order.id);
+            if (linkedBooking) {
+                linkedBooking.status = 'completed';
+            }
+        }
+
+        const box = this.db.boxes.find(b => b.id === order.boxId);
+        const boxName = box ? box.name : 'Бокс';
+
+        this.saveDatabase();
+        this.closePaymentModal();
+        this.renderAll();
+        alert(`👋 Мойка авто ${order.carPlate} полностью завершена и оплачена!\n${boxName} свободен для следующего автомобиля. Счастливого пути!`);
+    }
+
+    releaseOrder(orderId) {
+        const order = this.db.orders.find(o => String(o.id) === String(orderId));
+        if (!order) return;
+        this.finishOrder(order);
     }
 
     renderHistory() {
@@ -3190,7 +3516,7 @@ class CarWashApp {
         });
 
         this.db.orders.forEach(o => {
-            if (o.status !== 'paid') return;
+            if (o.status !== 'paid' && !o.isPaid) return;
 
             const paidDate = new Date(o.paidAt || o.createdAt);
             const dateStr = Security.getLocalDateString(paidDate);
@@ -3291,6 +3617,15 @@ class CarWashApp {
         const fbInput = document.getElementById('firebaseDbUrl');
         if (fbInput && this.db.cloud) {
             fbInput.value = this.db.cloud.firebaseUrl || '';
+        }
+
+        // Заполнение QR-кода автомойки для печати
+        const settingsQr = document.getElementById('settingsQrContainer');
+        const siteInput = document.getElementById('settingsSiteUrlInput');
+        if (settingsQr && siteInput) {
+            const siteUrl = window.location.href.split('#')[0];
+            siteInput.value = siteUrl;
+            this.renderQrCode(settingsQr, siteUrl, 140);
         }
     }
 
