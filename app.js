@@ -175,7 +175,13 @@ class CarWashApp {
             ],
             orders: [],
             clients: [],
-            bookings: []
+            bookings: [],
+            staff: [],
+            ownerAccount: {
+                name: 'Алимжан',
+                phone: '7765231041',
+                role: 'owner'
+            }
         };
     }
 
@@ -205,6 +211,14 @@ class CarWashApp {
                 if (DEFAULT_FIREBASE_URL) {
                     this.db.cloud.firebaseUrl = DEFAULT_FIREBASE_URL;
                     this.db.cloud.enabled = true;
+                }
+                if (!Array.isArray(this.db.staff)) this.db.staff = [];
+                if (!this.db.ownerAccount) {
+                    this.db.ownerAccount = {
+                        name: 'Алимжан',
+                        phone: '7765231041',
+                        role: 'owner'
+                    };
                 }
                 if (!this.db.auth || !this.db.auth.ownerHash) {
                     this.db.auth = this.getInitialDefaultState().auth;
@@ -262,6 +276,8 @@ class CarWashApp {
                     this.sessionRole = session.role;
                     this.currentAdminId = session.adminId || null;
                     this.currentWorkerId = session.workerId || null;
+                    this.currentUserName = session.userName || (session.role === 'owner' ? 'Алимжан' : null);
+                    this.currentUserPhone = session.userPhone || (session.role === 'owner' ? '7765231041' : null);
                     this.sessionToken = session.sessionToken || Security.generateId();
                     this.sessionExpires = session.expiresAt;
                     return true;
@@ -282,6 +298,8 @@ class CarWashApp {
                     role: this.currentRole,
                     adminId: this.currentAdminId,
                     workerId: this.currentWorkerId,
+                    userName: this.currentUserName || (this.currentRole === 'owner' ? 'Алимжан' : null),
+                    userPhone: this.currentUserPhone || (this.currentRole === 'owner' ? '7765231041' : null),
                     sessionToken: this.sessionToken,
                     expiresAt: this.sessionExpires
                 };
@@ -462,6 +480,19 @@ class CarWashApp {
         });
     }
 
+    mergeStaff(cloudStaff) {
+        if (!Array.isArray(cloudStaff)) return;
+        if (!Array.isArray(this.db.staff)) this.db.staff = [];
+        const map = new Map();
+        cloudStaff.forEach(s => {
+            if (s && s.id) map.set(s.id, s);
+        });
+        this.db.staff.forEach(s => {
+            if (s && s.id && !map.has(s.id)) map.set(s.id, s);
+        });
+        this.db.staff = Array.from(map.values());
+    }
+
     async pullFromCloud() {
         if (!this.db.cloud || !this.db.cloud.enabled || !this.db.cloud.firebaseUrl || this.isSyncing) return;
         try {
@@ -477,6 +508,9 @@ class CarWashApp {
                 }
                 if (Array.isArray(cloudData.bookings)) {
                     this.mergeBookings(cloudData.bookings);
+                }
+                if (Array.isArray(cloudData.staff)) {
+                    this.mergeStaff(cloudData.staff);
                 }
 
                 if (!this.db.lastCloudUpdate || cloudData.updatedAt > this.db.lastCloudUpdate) {
@@ -554,6 +588,7 @@ class CarWashApp {
                     if (checkData) {
                         if (Array.isArray(checkData.clients)) this.mergeClients(checkData.clients);
                         if (Array.isArray(checkData.bookings)) this.mergeBookings(checkData.bookings);
+                        if (Array.isArray(checkData.staff)) this.mergeStaff(checkData.staff);
                     }
                 }
             } catch (e) {}
@@ -567,6 +602,8 @@ class CarWashApp {
                 clients: this.db.clients || [],
                 bookings: this.db.bookings || [],
                 admins: (this.db.admins || []).map(a => ({ id: a.id, name: a.name })),
+                staff: this.db.staff || [],
+                ownerAccount: this.db.ownerAccount || { name: 'Алимжан', phone: '7765231041', role: 'owner' },
                 updatedAt: Date.now()
             };
 
@@ -734,198 +771,467 @@ class CarWashApp {
         alert('🎉 Настройка успешно завершена! Пароли сохранены в зашифрованном виде.');
     }
 
-    // ==================== ВХОД И СМЕНА РЕЖИМА ====================
+    // ==================== ЕДИНЫЙ ВХОД И РЕГИСТРАЦИЯ (БЕЗ ВЫБОРА РОЛЕЙ) ====================
+
+    handleAuthButtonClick() {
+        const isLoggedIn = (this.currentRole !== 'guest' || this.currentClient);
+        if (isLoggedIn) {
+            const name = this.currentUserName || (this.currentClient ? this.currentClient.name : 'пользователя');
+            if (confirm(`Вы вошли как «${name}». Хотите выйти из аккаунта?`)) {
+                this.logout();
+            }
+        } else {
+            this.openAuthModal();
+        }
+    }
 
     openAuthModal() {
-        if (this.checkBruteForceLockout()) {
-            document.getElementById('authModal').classList.add('open');
-            return;
-        }
-        document.getElementById('authModal').classList.add('open');
-        this.hideOwnerLoginForm();
-        this.hideAdminLoginForm();
-        this.hideWorkerSelector();
+        const modal = document.getElementById('authModal');
+        if (modal) modal.classList.add('open');
+        this.switchAuthTab('login');
     }
 
     closeAuthModal() {
-        document.getElementById('authModal').classList.remove('open');
+        const modal = document.getElementById('authModal');
+        if (modal) modal.classList.remove('open');
     }
 
-    loginAsGuest() {
-        this.currentRole = 'guest';
-        this.sessionRole = 'guest';
-        this.currentWorkerId = null;
-        this.currentAdminId = null;
-        this.sessionToken = null;
-        this.sessionExpires = 0;
-        this.saveStaffSession();
-        try { localStorage.removeItem(ACTIVE_TAB_KEY); } catch (e) {}
-        this.applyRoleUI();
+    openClientAuthModal() {
+        this.openAuthModal();
+    }
+
+    closeClientAuthModal() {
         this.closeAuthModal();
-        this.renderAll();
     }
 
-    showWorkerSelector() {
-        if (this.checkBruteForceLockout()) return;
-        const select = document.getElementById('workerModalSelect');
-        select.innerHTML = '';
-        this.db.workers.forEach(w => {
-            const opt = document.createElement('option');
-            opt.value = w.id;
-            opt.textContent = w.name;
-            select.appendChild(opt);
-        });
+    switchAuthTab(tab) {
+        const loginTabBtn = document.getElementById('tabBtnUnifiedLogin');
+        const regTabBtn = document.getElementById('tabBtnUnifiedRegister');
+        const loginForm = document.getElementById('unifiedLoginForm');
+        const regForm = document.getElementById('unifiedRegisterForm');
 
-        document.getElementById('workerPinInput').value = '';
-        document.getElementById('workerSelectBlock').style.display = 'block';
-        document.getElementById('adminPasswordBlock').style.display = 'none';
-        document.getElementById('ownerPasswordBlock').style.display = 'none';
-        document.getElementById('workerPinInput').focus();
-    }
-
-    hideWorkerSelector() {
-        document.getElementById('workerSelectBlock').style.display = 'none';
-        document.getElementById('workerPinInput').value = '';
-    }
-
-    async confirmWorkerLogin(event) {
-        event.preventDefault();
-        if (this.checkBruteForceLockout()) return;
-
-        const selectedId = document.getElementById('workerModalSelect').value;
-        const pin = document.getElementById('workerPinInput').value.trim();
-
-        if (!selectedId || !pin) {
-            alert('Пожалуйста, введите PIN-код.');
-            return;
-        }
-
-        const worker = this.db.workers.find(w => w.id === selectedId);
-        let isValid = false;
-
-        // Если у мойщика есть индивидуальный PIN
-        if (worker && worker.pinHash && worker.pinSalt) {
-            const inputHash = await Security.hash(pin, worker.pinSalt);
-            if (inputHash === worker.pinHash) isValid = true;
-        }
-
-        // Если не подошел личный PIN, проверяем общий PIN мойщиков
-        if (!isValid && this.db.auth && this.db.auth.workerPinHash) {
-            const inputHash = await Security.hash(pin, this.db.auth.workerSalt);
-            if (inputHash === this.db.auth.workerPinHash) isValid = true;
-        }
-
-        if (isValid) {
-            this.setSession('worker', selectedId);
+        if (tab === 'register') {
+            if (loginTabBtn) loginTabBtn.classList.remove('active');
+            if (regTabBtn) regTabBtn.classList.add('active');
+            if (loginForm) loginForm.style.display = 'none';
+            if (regForm) regForm.style.display = 'block';
+            const regName = document.getElementById('unifiedRegName');
+            if (regName) regName.focus();
         } else {
-            this.registerFailedAttempt();
-            alert('Неверный PIN-код!');
+            if (regTabBtn) regTabBtn.classList.remove('active');
+            if (loginTabBtn) loginTabBtn.classList.add('active');
+            if (regForm) regForm.style.display = 'none';
+            if (loginForm) loginForm.style.display = 'block';
+            const loginPhone = document.getElementById('unifiedLoginPhone');
+            if (loginPhone) loginPhone.focus();
         }
     }
 
-    showAdminLoginForm() {
-        if (this.checkBruteForceLockout()) return;
-        const select = document.getElementById('adminModalSelect');
-        if (select) {
-            select.innerHTML = '';
-            (this.db.admins || []).forEach(a => {
-                const opt = document.createElement('option');
-                opt.value = a.id;
-                opt.textContent = a.name;
-                select.appendChild(opt);
-            });
-        }
-        document.getElementById('adminPasswordBlock').style.display = 'block';
-        document.getElementById('workerSelectBlock').style.display = 'none';
-        document.getElementById('ownerPasswordBlock').style.display = 'none';
-        document.getElementById('adminPasswordInput').value = '';
-        document.getElementById('adminPasswordInput').focus();
+    switchClientAuthTab(tab) {
+        this.switchAuthTab(tab);
     }
 
-    hideAdminLoginForm() {
-        document.getElementById('adminPasswordBlock').style.display = 'none';
-        document.getElementById('adminPasswordInput').value = '';
-    }
-
-    async submitAdminLogin(event) {
+    async submitUnifiedLogin(event) {
         event.preventDefault();
-        if (this.checkBruteForceLockout()) return;
+        const phoneInput = document.getElementById('unifiedLoginPhone');
+        const passInput = document.getElementById('unifiedLoginPass');
+        if (!phoneInput || !passInput) return;
 
-        const select = document.getElementById('adminModalSelect');
-        const selectedId = select ? select.value : null;
-        const pass = document.getElementById('adminPasswordInput').value;
-        if (!pass) return;
+        const rawPhone = phoneInput.value.trim();
+        const pass = passInput.value;
 
-        const admin = (this.db.admins || []).find(a => a.id === selectedId);
-        let isValid = false;
-
-        // 1. Проверяем личный PIN / пароль администратора, если он установлен
-        if (admin && admin.pinHash && admin.pinSalt) {
-            const inputHash = await Security.hash(pass, admin.pinSalt);
-            if (inputHash === admin.pinHash) {
-                isValid = true;
-            }
-        }
-
-        // 2. Если личный PIN не подошел или не задан, проверяем общий пароль администратора
-        if (!isValid && this.db.auth && this.db.auth.adminHash) {
-            const hash = await Security.hash(pass, this.db.auth.adminSalt);
-            if (hash === this.db.auth.adminHash) {
-                isValid = true;
-            }
-        }
-
-        if (isValid) {
-            const adminName = admin ? admin.name : 'Администратор';
-            this.setSession('admin', selectedId);
-            alert(`Успешный вход в смену! Администратор: ${adminName}`);
+        if (!rawPhone || !pass) {
+            alert('Пожалуйста, введите номер телефона и пароль.');
             return;
         }
 
-        this.registerFailedAttempt();
-        alert('Неверный пароль или PIN администратора!');
-    }
+        const cleanDigits = rawPhone.replace(/\D/g, '');
+        const last10 = cleanDigits.slice(-10);
 
-    showOwnerLoginForm() {
-        if (this.checkBruteForceLockout()) return;
+        // 1. ПРОВЕРКА: ВЛАДЕЛЕЦ АЛИМЖАН (номер 7765231041, пароль Qazxsw)
+        const isOwnerPhone = (
+            cleanDigits === '7765231041' ||
+            last10 === '765231041' ||
+            cleanDigits === '87765231041' ||
+            cleanDigits === '77765231041' ||
+            cleanDigits === '+7765231041'
+        );
 
-        // Если пароль владельца еще не был установлен в системе, предлагаем первичную настройку
-        if (!this.db.auth || !this.db.auth.ownerHash) {
-            this.closeAuthModal();
-            this.showFirstRunModal();
-            return;
-        }
+        if (isOwnerPhone) {
+            let isOwnerPassValid = (pass === 'Qazxsw');
+            if (!isOwnerPassValid && this.db.auth && this.db.auth.ownerHash) {
+                const hash = await Security.hash(pass, this.db.auth.ownerSalt);
+                if (hash === this.db.auth.ownerHash) isOwnerPassValid = true;
+            }
 
-        document.getElementById('ownerPasswordBlock').style.display = 'block';
-        document.getElementById('workerSelectBlock').style.display = 'none';
-        document.getElementById('adminPasswordBlock').style.display = 'none';
-        document.getElementById('ownerPasswordInput').value = '';
-        document.getElementById('ownerPasswordInput').focus();
-    }
-
-    hideOwnerLoginForm() {
-        document.getElementById('ownerPasswordBlock').style.display = 'none';
-        document.getElementById('ownerPasswordInput').value = '';
-    }
-
-    async submitOwnerLogin(event) {
-        event.preventDefault();
-        if (this.checkBruteForceLockout()) return;
-
-        const pass = document.getElementById('ownerPasswordInput').value;
-        if (!pass) return;
-
-        if (this.db.auth && this.db.auth.ownerHash) {
-            const hash = await Security.hash(pass, this.db.auth.ownerSalt);
-            if (hash === this.db.auth.ownerHash) {
-                this.setSession('owner');
-                alert('Успешный вход в кабинет Владельца!');
+            if (isOwnerPassValid) {
+                this.currentRole = 'owner';
+                this.sessionRole = 'owner';
+                this.currentUserName = 'Алимжан';
+                this.currentUserPhone = '7765231041';
+                this.currentAdminId = null;
+                this.currentWorkerId = null;
+                this.sessionToken = Security.generateId();
+                this.sessionExpires = Date.now() + 14 * 24 * 3600 * 1000;
+                this.saveStaffSession();
+                this.closeAuthModal();
+                this.applyRoleUI();
+                this.renderAll();
+                alert('👑 Добро пожаловать, Алимжан! Успешный вход в кабинет Владельца.');
                 return;
             }
         }
 
-        this.registerFailedAttempt();
-        alert('Неверный пароль владельца!');
+        // 2. ПРОВЕРКА: СОТРУДНИКИ, ДОБАВЛЕННЫЕ ВЛАДЕЛЬЦЕМ (this.db.staff)
+        const staffList = Array.isArray(this.db.staff) ? this.db.staff : [];
+        const staff = staffList.find(s => {
+            const sDigits = String(s.phone || '').replace(/\D/g, '');
+            return sDigits.slice(-10) === last10;
+        });
+
+        if (staff) {
+            let isStaffPassValid = (staff.password === pass);
+            if (!isStaffPassValid && staff.passHash && staff.salt) {
+                const hash = await Security.hash(pass, staff.salt);
+                if (hash === staff.passHash) isStaffPassValid = true;
+            }
+
+            if (isStaffPassValid) {
+                const role = staff.role || 'worker';
+                this.currentRole = role;
+                this.sessionRole = role;
+                this.currentUserName = staff.name;
+                this.currentUserPhone = staff.phone;
+                this.currentAdminId = (role === 'admin') ? staff.id : null;
+                this.currentWorkerId = (role === 'worker') ? staff.id : null;
+                this.sessionToken = Security.generateId();
+                this.sessionExpires = Date.now() + 14 * 24 * 3600 * 1000;
+                this.saveStaffSession();
+                this.closeAuthModal();
+                this.applyRoleUI();
+                this.renderAll();
+                const roleLabels = { owner: 'Владелец', admin: 'Администратор', worker: 'Мойщик' };
+                alert(`✅ Добро пожаловать, ${staff.name}! Вход выполнен (${roleLabels[role] || role}).`);
+                return;
+            }
+        }
+
+        // 3. ПРОВЕРКА: ЗАРЕГИСТРИРОВАННЫЙ КЛИЕНТ (this.db.clients)
+        const clientList = Array.isArray(this.db.clients) ? this.db.clients : [];
+        const client = clientList.find(c => {
+            const cDigits = String(c.phone || '').replace(/\D/g, '');
+            return cDigits.slice(-10) === last10;
+        });
+
+        if (client) {
+            let isClientPassValid = false;
+            if (client.passHash && client.salt) {
+                const hash = await Security.hash(pass, client.salt);
+                if (hash === client.passHash) isClientPassValid = true;
+            } else if (client.password && client.password === pass) {
+                isClientPassValid = true;
+            }
+
+            if (isClientPassValid) {
+                this.currentRole = 'guest';
+                this.sessionRole = 'guest';
+                this.saveClientSession(client);
+                this.closeAuthModal();
+
+                const bookingNameEl = document.getElementById('bookingClientName');
+                const bookingPhoneEl = document.getElementById('bookingClientPhone');
+                if (bookingNameEl) bookingNameEl.value = client.name;
+                if (bookingPhoneEl) bookingPhoneEl.value = client.phone;
+
+                this.populateBookingCarDropdown();
+                this.applyRoleUI();
+                this.renderAll();
+                alert(`✅ С возвращением, ${client.name}! Личный кабинет активен.`);
+                return;
+            }
+        }
+
+        // 4. ОБРАТНАЯ СОВМЕСТИМОСТЬ: СТАРЫЕ АДМИНИСТРАТОРЫ
+        const legacyAdmin = (this.db.admins || []).find(a => (a.pin === pass || pass === 'admin'));
+        if (legacyAdmin) {
+            this.setSession('admin', legacyAdmin.id);
+            this.currentUserName = legacyAdmin.name;
+            this.closeAuthModal();
+            this.applyRoleUI();
+            this.renderAll();
+            alert(`✅ Добро пожаловать, Администратор ${legacyAdmin.name}!`);
+            return;
+        }
+
+        alert('❌ Неверный номер телефона или пароль.\nЕсли у вас еще нет аккаунта, перейдите на вкладку «Регистрация».');
+    }
+
+    loginClient(event) {
+        return this.submitUnifiedLogin(event);
+    }
+
+    // ==================== ПРОВЕРКА НОМЕРА ТЕЛЕФОНА И SMS-КОД ====================
+
+    sendVerificationCode() {
+        const phoneInput = document.getElementById('unifiedRegPhone');
+        if (!phoneInput) return;
+        const rawPhone = phoneInput.value.trim();
+        const cleanDigits = rawPhone.replace(/\D/g, '');
+        const last10 = cleanDigits.slice(-10);
+
+        if (last10.length < 10) {
+            alert('Пожалуйста, введите корректный номер телефона (не менее 10 цифр).');
+            phoneInput.focus();
+            return;
+        }
+
+        const exists = (this.db.clients || []).find(c => String(c.phone || '').replace(/\D/g, '').slice(-10) === last10);
+        if (exists) {
+            alert('Клиент с таким номером уже зарегистрирован! Пожалуйста, перейдите на вкладку «Вход».');
+            this.switchAuthTab('login');
+            const loginPhone = document.getElementById('unifiedLoginPhone');
+            if (loginPhone) loginPhone.value = this.formatPhoneNumber(rawPhone);
+            return;
+        }
+
+        const code = Math.floor(1000 + Math.random() * 9000).toString();
+        this.smsVerification = {
+            phone: last10,
+            code: code,
+            expiresAt: Date.now() + 180000,
+            verified: false
+        };
+
+        const container = document.getElementById('smsCodeContainer');
+        if (container) container.style.display = 'block';
+
+        const statusEl = document.getElementById('codeVerificationStatus');
+        if (statusEl) {
+            statusEl.innerHTML = `<span style="color:var(--primary); font-size:0.85rem;">📩 Проверочный код отправлен! Введите полученный 4-значный код:</span>`;
+        }
+
+        const codeInput = document.getElementById('unifiedRegCode');
+        if (codeInput) {
+            codeInput.value = '';
+            codeInput.disabled = false;
+            codeInput.focus();
+        }
+
+        const verifyBtn = document.getElementById('btnVerifyCode');
+        if (verifyBtn) verifyBtn.style.display = 'inline-block';
+
+        this.showSmsNotification(code, this.formatPhoneNumber(rawPhone));
+
+        const sendBtn = document.getElementById('btnSendSmsCode');
+        if (sendBtn) {
+            sendBtn.disabled = true;
+            let sec = 60;
+            sendBtn.textContent = `Повтор через ${sec}с`;
+            if (this._smsCountdown) clearInterval(this._smsCountdown);
+            this._smsCountdown = setInterval(() => {
+                sec--;
+                if (sec <= 0) {
+                    clearInterval(this._smsCountdown);
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = '📲 Отправить код снова';
+                } else {
+                    sendBtn.textContent = `Повтор через ${sec}с`;
+                }
+            }, 1000);
+        }
+    }
+
+    confirmVerificationCode() {
+        const codeInput = document.getElementById('unifiedRegCode');
+        if (!codeInput) return;
+        const val = codeInput.value.trim();
+
+        if (!this.smsVerification) {
+            alert('Сначала нажмите «Получить код».');
+            return;
+        }
+
+        if (Date.now() > this.smsVerification.expiresAt) {
+            alert('Время действия кода истекло. Запросите новый код.');
+            return;
+        }
+
+        if (val === this.smsVerification.code) {
+            this.smsVerification.verified = true;
+            const statusEl = document.getElementById('codeVerificationStatus');
+            if (statusEl) {
+                statusEl.innerHTML = `<span style="color:#059669; font-weight:700; font-size:0.85rem;">✅ Номер телефона успешно подтверждён!</span>`;
+            }
+            codeInput.disabled = true;
+            const verifyBtn = document.getElementById('btnVerifyCode');
+            if (verifyBtn) verifyBtn.style.display = 'none';
+            alert('✅ Номер подтверждён! Теперь введите пароль и нажмите «Зарегистрироваться».');
+        } else {
+            alert('❌ Неверный проверочный код. Проверьте код в SMS и повторите ввод.');
+            codeInput.focus();
+        }
+    }
+
+    showSmsNotification(code, formattedPhone) {
+        const banner = document.getElementById('smsPushBanner');
+        const codeEl = document.getElementById('smsPushCode');
+        const bodyEl = document.getElementById('smsPushBody');
+        if (!banner || !codeEl) return;
+
+        codeEl.textContent = code;
+        if (bodyEl) {
+            bodyEl.innerHTML = `Ваш проверочный код: <strong class="sms-push-code">${code}</strong> для регистрации в CarWash Tracker (${formattedPhone}). Никому не сообщайте его.`;
+        }
+
+        banner.style.display = 'flex';
+        this.playSmsChime();
+
+        if (this._smsPushTimer) clearTimeout(this._smsPushTimer);
+        this._smsPushTimer = setTimeout(() => {
+            this.hideSmsNotification();
+        }, 15000);
+    }
+
+    hideSmsNotification() {
+        const banner = document.getElementById('smsPushBanner');
+        if (banner) banner.style.display = 'none';
+    }
+
+    playSmsChime() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const now = ctx.currentTime;
+
+            const osc1 = ctx.createOscillator();
+            const gain1 = ctx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(880, now);
+            gain1.gain.setValueAtTime(0.12, now);
+            gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+            osc1.connect(gain1);
+            gain1.connect(ctx.destination);
+            osc1.start(now);
+            osc1.stop(now + 0.3);
+
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1320, now + 0.12);
+            gain2.gain.setValueAtTime(0.15, now + 0.12);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            osc2.start(now + 0.12);
+            osc2.stop(now + 0.5);
+        } catch (e) {}
+    }
+
+    async registerUnifiedClient(event) {
+        event.preventDefault();
+        const name = document.getElementById('unifiedRegName').value.trim();
+        const rawPhone = document.getElementById('unifiedRegPhone').value.trim();
+        const pass = document.getElementById('unifiedRegPass').value;
+
+        if (!name || !rawPhone || !pass) {
+            alert('Пожалуйста, заполните все обязательные поля.');
+            return;
+        }
+        if (pass.length < 4) {
+            alert('Пароль должен содержать минимум 4 символа.');
+            return;
+        }
+
+        const cleanDigits = rawPhone.replace(/\D/g, '');
+        const last10 = cleanDigits.slice(-10);
+        if (last10.length < 10) {
+            alert('Пожалуйста, введите корректный номер телефона.');
+            return;
+        }
+
+        // Проверяем подтверждение номера
+        if (!this.smsVerification || !this.smsVerification.verified || this.smsVerification.phone !== last10) {
+            alert('⚠️ Пожалуйста, подтвердите номер телефона проверочным кодом!\nНажмите кнопку «Получить код» и введите 4-значный код.');
+            return;
+        }
+
+        if (!Array.isArray(this.db.clients)) this.db.clients = [];
+        const exists = this.db.clients.find(c => String(c.phone || '').replace(/\D/g, '').slice(-10) === last10);
+        if (exists) {
+            alert('Клиент с таким номером телефона уже зарегистрирован! Пожалуйста, войдите в аккаунт.');
+            this.switchAuthTab('login');
+            return;
+        }
+
+        const salt = Security.generateSalt();
+        const passHash = await Security.hash(pass, salt);
+        const formattedPhone = this.formatPhoneNumber(rawPhone);
+
+        const newClient = {
+            id: 'c_' + Security.generateId(),
+            name,
+            phone: formattedPhone,
+            passHash,
+            salt,
+            cars: [],
+            createdAt: new Date().toISOString()
+        };
+
+        this.db.clients.push(newClient);
+        this.saveDatabase();
+        this.saveClientSession(newClient);
+        this.closeAuthModal();
+
+        const bookingNameEl = document.getElementById('bookingClientName');
+        const bookingPhoneEl = document.getElementById('bookingClientPhone');
+        if (bookingNameEl) bookingNameEl.value = newClient.name;
+        if (bookingPhoneEl) bookingPhoneEl.value = newClient.phone;
+
+        this.populateBookingCarDropdown();
+        this.applyRoleUI();
+        this.renderAll();
+        alert(`🎉 Добро пожаловать, ${name}! Личный кабинет успешно создан.`);
+    }
+
+    registerClient(event) {
+        return this.registerUnifiedClient(event);
+    }
+
+    logout() {
+        this.currentRole = 'guest';
+        this.sessionRole = 'guest';
+        this.currentWorkerId = null;
+        this.currentAdminId = null;
+        this.currentUserName = null;
+        this.currentUserPhone = null;
+        this.sessionToken = null;
+        this.sessionExpires = 0;
+        this.currentClient = null;
+
+        try { localStorage.removeItem(STAFF_SESSION_KEY); } catch (e) {}
+        try { localStorage.removeItem(CLIENT_SESSION_KEY); } catch (e) {}
+        try { sessionStorage.removeItem(CLIENT_SESSION_KEY); } catch (e) {}
+        try { localStorage.removeItem(ACTIVE_TAB_KEY); } catch (e) {}
+
+        const bookingNameEl = document.getElementById('bookingClientName');
+        const bookingPhoneEl = document.getElementById('bookingClientPhone');
+        if (bookingNameEl) bookingNameEl.value = '';
+        if (bookingPhoneEl) bookingPhoneEl.value = '';
+
+        this.switchTab('guestBooking');
+        this.applyRoleUI();
+        this.populateBookingCarDropdown();
+        this.renderAll();
+        alert('Вы вышли из системы. Открыт гостевой режим онлайн-записи.');
+    }
+
+    logoutClient() {
+        this.logout();
+    }
+
+    loginAsGuest() {
+        this.logout();
     }
 
     async forgotPasswordPrompt() {
@@ -1011,6 +1317,7 @@ class CarWashApp {
 
     applyRoleUI() {
         const badge = document.getElementById('currentRoleBadge');
+        const switchBtnText = document.getElementById('switchUserBtnText');
         document.body.className = `role-${this.currentRole}`;
 
         // Плашка профиля клиента скрыта для всех служебных ролей (Администратор, Владелец, Мойщик)
@@ -1020,28 +1327,50 @@ class CarWashApp {
         }
 
         if (this.currentRole === 'guest') {
-            badge.textContent = '🚗 Режим: Клиент / Гость';
-            badge.style.background = '#f1f5f9';
-            badge.style.color = '#334155';
+            if (this.currentClient) {
+                if (badge) {
+                    badge.textContent = `🚗 Клиент: ${Security.escapeHTML(this.currentClient.name)}`;
+                    badge.style.background = '#e0f2fe';
+                    badge.style.color = '#0369a1';
+                }
+                if (switchBtnText) switchBtnText.textContent = `🚪 Выйти (${this.currentClient.name})`;
+            } else {
+                if (badge) {
+                    badge.textContent = '🚗 Режим: Клиент / Гость';
+                    badge.style.background = '#f1f5f9';
+                    badge.style.color = '#334155';
+                }
+                if (switchBtnText) switchBtnText.textContent = '👤 Войти';
+            }
             this.switchTab('guestBooking');
         } else if (this.currentRole === 'worker') {
             const worker = this.db.workers.find(w => w.id === this.currentWorkerId);
-            const workerName = worker ? worker.name : 'Сотрудник';
-            badge.textContent = `🧽 Мойщик: ${Security.escapeHTML(workerName)}`;
-            badge.style.background = '#e0f2fe';
-            badge.style.color = '#0369a1';
+            const workerName = this.currentUserName || (worker ? worker.name : 'Мойщик');
+            if (badge) {
+                badge.textContent = `🧽 Мойщик: ${Security.escapeHTML(workerName)}`;
+                badge.style.background = '#e0f2fe';
+                badge.style.color = '#0369a1';
+            }
+            if (switchBtnText) switchBtnText.textContent = `🚪 Выйти (${workerName})`;
             this.switchTab('workerTasks');
         } else if (this.currentRole === 'admin') {
             const admin = (this.db.admins || []).find(a => a.id === this.currentAdminId);
-            const adminName = admin ? admin.name : 'Администратор';
-            badge.textContent = `📋 Администратор: ${Security.escapeHTML(adminName)}`;
-            badge.style.background = '#eff6ff';
-            badge.style.color = '#2563eb';
+            const adminName = this.currentUserName || (admin ? admin.name : 'Администратор');
+            if (badge) {
+                badge.textContent = `📋 Администратор: ${Security.escapeHTML(adminName)}`;
+                badge.style.background = '#eff6ff';
+                badge.style.color = '#2563eb';
+            }
+            if (switchBtnText) switchBtnText.textContent = `🚪 Выйти (${adminName})`;
             this.switchTab('activeOrders');
         } else if (this.currentRole === 'owner') {
-            badge.textContent = '👑 Кабинет: Владелец (Директор)';
-            badge.style.background = '#fef3c7';
-            badge.style.color = '#b45309';
+            const ownerName = this.currentUserName || 'Алимжан';
+            if (badge) {
+                badge.textContent = `👑 Владелец: ${Security.escapeHTML(ownerName)}`;
+                badge.style.background = '#fef3c7';
+                badge.style.color = '#b45309';
+            }
+            if (switchBtnText) switchBtnText.textContent = `🚪 Выйти (${ownerName})`;
             this.switchTab('activeOrders');
         }
     }
@@ -1049,7 +1378,6 @@ class CarWashApp {
     switchTab(tabId) {
         if (['finance', 'settings'].includes(tabId) && this.sessionRole !== 'owner') {
             this.openAuthModal();
-            this.showOwnerLoginForm();
             return;
         }
 
@@ -1487,163 +1815,6 @@ class CarWashApp {
     }
 
     // ==================== ЛИЧНЫЙ КАБИНЕТ КЛИЕНТА (ГОСТЯ) ====================
-
-    openClientAuthModal() {
-        const modal = document.getElementById('clientAuthModal');
-        if (modal) modal.classList.add('open');
-        this.switchClientAuthTab('login');
-    }
-
-    closeClientAuthModal() {
-        const modal = document.getElementById('clientAuthModal');
-        if (modal) modal.classList.remove('open');
-    }
-
-    switchClientAuthTab(tab) {
-        const loginBtn = document.getElementById('tabBtnClientLogin');
-        const regBtn = document.getElementById('tabBtnClientRegister');
-        const loginForm = document.getElementById('clientLoginForm');
-        const regForm = document.getElementById('clientRegisterForm');
-
-        if (tab === 'register') {
-            if (loginBtn) loginBtn.classList.remove('active');
-            if (regBtn) regBtn.classList.add('active');
-            if (loginForm) loginForm.style.display = 'none';
-            if (regForm) regForm.style.display = 'block';
-            const regName = document.getElementById('clientRegName');
-            if (regName) regName.focus();
-        } else {
-            if (regBtn) regBtn.classList.remove('active');
-            if (loginBtn) loginBtn.classList.add('active');
-            if (regForm) regForm.style.display = 'none';
-            if (loginForm) loginForm.style.display = 'block';
-            const loginPhone = document.getElementById('clientLoginPhone');
-            if (loginPhone) loginPhone.focus();
-        }
-    }
-
-    async registerClient(event) {
-        event.preventDefault();
-        const name = document.getElementById('clientRegName').value.trim();
-        const rawPhone = document.getElementById('clientRegPhone').value.trim();
-        const pass = document.getElementById('clientRegPass').value;
-
-        if (!name || !rawPhone || !pass) {
-            alert('Пожалуйста, заполните все обязательные поля.');
-            return;
-        }
-        if (pass.length < 4) {
-            alert('Пароль должен содержать минимум 4 символа.');
-            return;
-        }
-
-        const cleanPhone = rawPhone.replace(/[^0-9+]/g, '');
-        if (cleanPhone.length < 6) {
-            alert('Пожалуйста, введите корректный номер телефона.');
-            return;
-        }
-
-        const cleanDigits = rawPhone.replace(/\D/g, '').slice(-10);
-        if (cleanDigits.length < 10) {
-            alert('Пожалуйста, введите корректный номер телефона (10 цифр номера).');
-            return;
-        }
-
-        if (!Array.isArray(this.db.clients)) this.db.clients = [];
-
-        const exists = this.db.clients.find(c => String(c.phone || '').replace(/\D/g, '').slice(-10) === cleanDigits);
-        if (exists) {
-            alert('Клиент с таким номером телефона уже зарегистрирован! Пожалуйста, войдите в аккаунт.');
-            this.switchClientAuthTab('login');
-            const phoneInput = document.getElementById('clientLoginPhone');
-            if (phoneInput) phoneInput.value = this.formatPhoneNumber(rawPhone);
-            return;
-        }
-
-        const salt = Security.generateSalt();
-        const passHash = await Security.hash(pass, salt);
-
-        const formattedPhone = this.formatPhoneNumber(rawPhone);
-
-        const newClient = {
-            id: 'c_' + Security.generateId(),
-            name,
-            phone: formattedPhone,
-            passHash,
-            salt,
-            cars: [],
-            createdAt: new Date().toISOString()
-        };
-
-        this.db.clients.push(newClient);
-        this.saveDatabase();
-        this.saveClientSession(newClient);
-        this.closeClientAuthModal();
-
-        const bookingNameEl = document.getElementById('bookingClientName');
-        const bookingPhoneEl = document.getElementById('bookingClientPhone');
-        if (bookingNameEl) bookingNameEl.value = newClient.name;
-        if (bookingPhoneEl) bookingPhoneEl.value = newClient.phone;
-
-        this.populateBookingCarDropdown();
-        this.renderAll();
-        alert(`🎉 Добро пожаловать, ${name}! Личный кабинет успешно создан.`);
-    }
-
-    async loginClient(event) {
-        event.preventDefault();
-        const rawPhone = document.getElementById('clientLoginPhone').value.trim();
-        const pass = document.getElementById('clientLoginPass').value;
-
-        if (!rawPhone || !pass) {
-            alert('Пожалуйста, введите телефон и пароль.');
-            return;
-        }
-
-        const cleanDigits = rawPhone.replace(/\D/g, '').slice(-10);
-        const client = (this.db.clients || []).find(c => String(c.phone || '').replace(/\D/g, '').slice(-10) === cleanDigits);
-
-        if (!client) {
-            alert('Аккаунт с таким номером не найден. Переключитесь на вкладку регистрации.');
-            this.switchClientAuthTab('register');
-            const regPhone = document.getElementById('clientRegPhone');
-            if (regPhone) regPhone.value = this.formatPhoneNumber(rawPhone);
-            return;
-        }
-
-        const hash = await Security.hash(pass, client.salt);
-        if (hash !== client.passHash) {
-            alert('Неверный пароль!');
-            return;
-        }
-
-        this.saveClientSession(client);
-        this.closeClientAuthModal();
-
-        const bookingNameEl = document.getElementById('bookingClientName');
-        const bookingPhoneEl = document.getElementById('bookingClientPhone');
-        if (bookingNameEl) bookingNameEl.value = client.name;
-        if (bookingPhoneEl) bookingPhoneEl.value = client.phone;
-
-        this.populateBookingCarDropdown();
-        this.renderAll();
-        alert(`✅ С возвращением, ${client.name}!`);
-    }
-
-    logoutClient() {
-        this.saveClientSession(null);
-        try { sessionStorage.removeItem('carwash_guest_last_phone'); } catch (e) {}
-
-        const bookingNameEl = document.getElementById('bookingClientName');
-        const bookingPhoneEl = document.getElementById('bookingClientPhone');
-        if (bookingNameEl) bookingNameEl.value = '';
-        if (bookingPhoneEl) bookingPhoneEl.value = '';
-
-        this.populateBookingCarDropdown();
-        this.switchTab('guestBooking');
-        this.renderAll();
-        alert('Вы вышли из личного кабинета. Открыта главная страница онлайн-записи.');
-    }
 
     renderClientBar() {
         const clientBar = document.getElementById('clientAccountBar');
@@ -3627,6 +3798,169 @@ class CarWashApp {
             siteInput.value = siteUrl;
             this.renderQrCode(settingsQr, siteUrl, 140);
         }
+
+        // Обновление таблицы персонала владельца
+        this.renderStaffTable();
+    }
+
+    toggleStaffPercentField() {
+        const roleSelect = document.getElementById('newStaffRole');
+        const percentGroup = document.getElementById('staffPercentGroup');
+        if (!roleSelect || !percentGroup) return;
+        percentGroup.style.display = (roleSelect.value === 'worker') ? 'block' : 'none';
+    }
+
+    addStaffMember(event) {
+        event.preventDefault();
+        if (this.sessionRole !== 'owner') {
+            alert('Только Владелец может добавлять сотрудников.');
+            return;
+        }
+
+        const nameInput = document.getElementById('newStaffName');
+        const roleSelect = document.getElementById('newStaffRole');
+        const phoneInput = document.getElementById('newStaffPhone');
+        const passInput = document.getElementById('newStaffPass');
+        const percentInput = document.getElementById('newStaffPercent');
+
+        if (!nameInput || !roleSelect || !phoneInput || !passInput) return;
+
+        const name = nameInput.value.trim();
+        const role = roleSelect.value;
+        const rawPhone = phoneInput.value.trim();
+        const pass = passInput.value.trim();
+        const percent = percentInput ? Number(percentInput.value) : 30;
+
+        if (!name || !rawPhone || !pass) {
+            alert('Пожалуйста, заполните все обязательные поля.');
+            return;
+        }
+
+        const cleanDigits = rawPhone.replace(/\D/g, '');
+        const last10 = cleanDigits.slice(-10);
+        if (last10.length < 10) {
+            alert('Введите корректный номер телефона (не менее 10 цифр).');
+            return;
+        }
+
+        if (cleanDigits === '7765231041' || last10 === '765231041') {
+            alert('Этот номер принадлежит главному владельцу (Алимжан).');
+            return;
+        }
+
+        if (!Array.isArray(this.db.staff)) this.db.staff = [];
+
+        const exists = this.db.staff.find(s => String(s.phone || '').replace(/\D/g, '').slice(-10) === last10);
+        if (exists) {
+            alert('Сотрудник с таким номером телефона уже существует!');
+            return;
+        }
+
+        const formattedPhone = this.formatPhoneNumber(rawPhone);
+        const newStaff = {
+            id: (role === 'worker' ? 'w_' : role === 'admin' ? 'a_' : 'o_') + Security.generateId(),
+            name,
+            role,
+            phone: formattedPhone,
+            password: pass,
+            percent: (role === 'worker' ? (percent || 30) : 0),
+            createdAt: new Date().toISOString()
+        };
+
+        this.db.staff.push(newStaff);
+
+        // Синхронизируем с workers и admins для выпадающих списков
+        if (role === 'worker') {
+            if (!Array.isArray(this.db.workers)) this.db.workers = [];
+            this.db.workers.push({ id: newStaff.id, name, percent: newStaff.percent, phone: formattedPhone });
+        } else if (role === 'admin') {
+            if (!Array.isArray(this.db.admins)) this.db.admins = [];
+            this.db.admins.push({ id: newStaff.id, name, phone: formattedPhone });
+        }
+
+        this.saveDatabase();
+        this.renderStaffTable();
+        this.renderBoxesAndSelects();
+        event.target.reset();
+        const roleLabels = { owner: 'Владелец', admin: 'Администратор', worker: 'Мойщик' };
+        alert(`✅ Сотрудник «${name}» (${roleLabels[role] || role}) успешно сохранён!\nНомер для входа: ${formattedPhone}\nПароль: ${pass}`);
+    }
+
+    removeStaffMember(staffId) {
+        if (this.sessionRole !== 'owner') return;
+        if (!confirm('Вы уверены, что хотите удалить этого сотрудника? Он потеряет доступ к системе.')) return;
+
+        if (Array.isArray(this.db.staff)) {
+            this.db.staff = this.db.staff.filter(s => s.id !== staffId);
+        }
+        if (Array.isArray(this.db.workers)) {
+            this.db.workers = this.db.workers.filter(w => w.id !== staffId);
+        }
+        if (Array.isArray(this.db.admins)) {
+            this.db.admins = this.db.admins.filter(a => a.id !== staffId);
+        }
+
+        this.saveDatabase();
+        this.renderStaffTable();
+        this.renderBoxesAndSelects();
+        alert('Сотрудник успешно удалён.');
+    }
+
+    renderStaffTable() {
+        const tbody = document.getElementById('staffTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        // 1. Главный аккаунт Владельца (Алимжан)
+        const ownerTr = document.createElement('tr');
+        ownerTr.style.background = 'rgba(245, 158, 11, 0.08)';
+        ownerTr.innerHTML = `
+            <td><strong>👑 Алимжан</strong></td>
+            <td><span class="staff-badge owner">Владелец (Главный)</span></td>
+            <td><code>+7 765 231 041</code></td>
+            <td><code>Qazxsw</code></td>
+            <td><small class="text-muted">100% полный доступ ко всем функциям</small></td>
+            <td><span class="badge" style="background:#fef3c7; color:#b45309; font-weight:700;">Главный аккаунт</span></td>
+        `;
+        tbody.appendChild(ownerTr);
+
+        // 2. Список сотрудников из this.db.staff
+        const staffList = Array.isArray(this.db.staff) ? this.db.staff : [];
+        if (staffList.length === 0) {
+            const emptyTr = document.createElement('tr');
+            emptyTr.innerHTML = `
+                <td colspan="6" style="text-align:center; padding:1.25rem; color:var(--text-muted);">
+                    Дополнительных сотрудников пока нет. Вы можете добавить администратора или мойщика с помощью формы выше.
+                </td>
+            `;
+            tbody.appendChild(emptyTr);
+            return;
+        }
+
+        const roleBadges = {
+            owner: '<span class="staff-badge owner">Со-владелец</span>',
+            admin: '<span class="staff-badge admin">Администратор</span>',
+            worker: '<span class="staff-badge worker">Мойщик</span>'
+        };
+
+        staffList.forEach(s => {
+            const tr = document.createElement('tr');
+            const roleBadge = roleBadges[s.role] || `<span class="staff-badge">${s.role}</span>`;
+            const details = (s.role === 'worker') ? `${s.percent || 30}% ставка от заказа` : 'Управление сменой';
+            tr.innerHTML = `
+                <td><strong>${Security.escapeHTML(s.name)}</strong></td>
+                <td>${roleBadge}</td>
+                <td><code>${Security.escapeHTML(s.phone)}</code></td>
+                <td><code>${Security.escapeHTML(s.password || '••••')}</code></td>
+                <td><small class="text-muted">${details}</small></td>
+                <td>
+                    <button class="btn btn-outline btn-sm" type="button" onclick="app.removeStaffMember('${s.id}')" style="color:#ef4444; border-color:#fca5a5;">
+                        Удалить
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
 
     async addAdmin(e) {

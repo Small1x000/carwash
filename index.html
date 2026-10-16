@@ -47,8 +47,8 @@
                 <button class="btn btn-outline" id="qrCodeHeaderBtn" type="button" onclick="app.openQrModal()" title="QR-код сайта для клиентов">
                     📱 <span class="hide-mobile">QR-код</span>
                 </button>
-                <button class="btn btn-outline" id="switchUserBtn" type="button" onclick="app.openAuthModal()">
-                    👤 Сменить режим
+                <button class="btn btn-outline" id="switchUserBtn" type="button" onclick="app.handleAuthButtonClick()">
+                    <span id="switchUserBtnText">👤 Войти</span>
                 </button>
             </div>
         </header>
@@ -733,27 +733,68 @@
                     </div>
                 </div>
 
-                <!-- 3. АДМИНИСТРАТОРЫ, ПЕРСОНАЛ И ПРАЙС -->
-                <div class="two-columns" style="margin-top: 1.5rem;">
-                    <div class="card">
-                        <h3>Администраторы смены</h3>
-                        <form id="addAdminForm" onsubmit="app.addAdmin(event)" class="inline-form">
-                            <input type="text" id="newAdminName" placeholder="Имя администратора" required maxlength="30">
-                            <input type="password" id="newAdminPin" placeholder="Личный PIN (необяз.)" maxlength="20">
-                            <button type="submit" class="btn btn-primary">+ Добавить</button>
-                        </form>
-                        <ul class="items-list" id="adminsList"></ul>
+                <!-- 3. УПРАВЛЕНИЕ ДОСТУПОМ И СОТРУДНИКАМИ (ВЛАДЕЛЕЦ АЛИМЖАН) -->
+                <div class="card" style="margin-top: 1.5rem;" id="ownerStaffManagementCard">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
+                        <div>
+                            <h3 style="font-size:1.2rem; display:flex; align-items:center; gap:0.5rem;">👥 Управление доступом сотрудников (Персонал)</h3>
+                            <p class="text-muted" style="font-size:0.85rem; margin-top:0.25rem;">Владелец (Алимжан) вручную задаёт номер телефона и пароль для Администраторов, Мойщиков и других Владельцев.</p>
+                        </div>
+                        <span class="badge" style="background:#fef3c7; color:#b45309; font-weight:700; padding:0.35rem 0.75rem;">👑 Кабинет Владельца</span>
                     </div>
 
-                    <div class="card">
-                        <h3>Сотрудники (мойщики)</h3>
-                        <form id="addWorkerForm" onsubmit="app.addWorker(event)" class="inline-form">
-                            <input type="text" id="newWorkerName" placeholder="Имя" required maxlength="30">
-                            <input type="number" id="newWorkerPercent" placeholder="% ставка" value="30" min="0" max="100" required>
-                            <input type="password" id="newWorkerPin" placeholder="Личный PIN (4 цифры)" minlength="4" maxlength="8" inputmode="numeric">
-                            <button type="submit" class="btn btn-primary">+ Добавить</button>
-                        </form>
-                        <ul class="items-list" id="workersList"></ul>
+                    <!-- Форма добавления сотрудника -->
+                    <form id="addStaffForm" onsubmit="app.addStaffMember(event)" style="background:var(--bg-page); padding:1.25rem; border-radius:var(--radius); border:1px solid var(--border); margin-bottom:1.5rem;">
+                        <h4 style="margin-bottom:0.85rem; font-size:1rem;">➕ Добавить сотрудника / выдать пароль доступа:</h4>
+                        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.85rem;">
+                            <div class="form-group">
+                                <label for="newStaffName">Имя сотрудника *</label>
+                                <input type="text" id="newStaffName" placeholder="Например: Руслан" required maxlength="30">
+                            </div>
+                            <div class="form-group">
+                                <label for="newStaffRole">Роль в системе *</label>
+                                <select id="newStaffRole" onchange="app.toggleStaffPercentField()" required>
+                                    <option value="admin">📋 Администратор (10 боксов, брони, касса смены)</option>
+                                    <option value="worker">🧽 Мойщик (назначенные авто, свой заработок)</option>
+                                    <option value="owner">👑 Владелец (полный доступ, аналитика, настройки)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="newStaffPhone">Номер телефона для входа *</label>
+                                <input type="tel" id="newStaffPhone" placeholder="+7 (701) 000-00-00" required maxlength="25">
+                            </div>
+                            <div class="form-group">
+                                <label for="newStaffPass">Пароль для входа *</label>
+                                <input type="text" id="newStaffPass" placeholder="Любой пароль или PIN" required minlength="3">
+                            </div>
+                            <div class="form-group" id="staffPercentGroup" style="display:none;">
+                                <label for="newStaffPercent">% ставка мойщика от заказа</label>
+                                <input type="number" id="newStaffPercent" value="30" min="0" max="100">
+                            </div>
+                        </div>
+                        <div style="margin-top:1.25rem; text-align:right;">
+                            <button type="submit" class="btn btn-primary">➕ Сохранить и выдать доступ сотруднику</button>
+                        </div>
+                    </form>
+
+                    <!-- Таблица активных сотрудников -->
+                    <h4 style="margin-bottom:0.65rem; font-size:1rem;">Список активных учетных записей персонала:</h4>
+                    <div style="overflow-x:auto;">
+                        <table class="data-table" id="staffTable">
+                            <thead>
+                                <tr>
+                                    <th>Имя</th>
+                                    <th>Роль</th>
+                                    <th>Номер телефона</th>
+                                    <th>Пароль для входа</th>
+                                    <th>Ставка / Детали</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staffTableBody">
+                                <!-- Заполняется динамически -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -836,187 +877,95 @@
 
         <!-- ===================== МОДАЛЬНЫЕ ОКНА ===================== -->
 
-        <!-- 1. МОДАЛЬНОЕ ОКНО: ЛИЧНЫЙ КАБИНЕТ КЛИЕНТА (ВХОД / РЕГИСТРАЦИЯ) -->
-        <div class="modal-backdrop" id="clientAuthModal" role="dialog" aria-modal="true" aria-labelledby="clientAuthTitle">
-            <div class="modal-window">
+        <!-- ИНТЕРАКТИВНОЕ PUSH-УВЕДОМЛЕНИЕ SMS ДЛЯ ПРОВЕРКИ НОМЕРА -->
+        <div id="smsPushBanner" class="sms-push-banner" style="display:none;" onclick="app.hideSmsNotification()">
+            <div class="sms-push-header">
+                <span class="sms-push-app">💬 Сообщения • CarWash Tracker</span>
+                <span class="sms-push-time">сейчас</span>
+            </div>
+            <div class="sms-push-body" id="smsPushBody">
+                Ваш код подтверждения: <strong class="sms-push-code" id="smsPushCode">0000</strong>. Никому не сообщайте данный код.
+            </div>
+        </div>
+
+        <!-- ЕДИНОЕ МОДАЛЬНОЕ ОКНО: ВХОД И БЫСТРАЯ РЕГИСТРАЦИЯ (БЕЗ ВЫБОРА РОЛЕЙ) -->
+        <div class="modal-backdrop" id="authModal" role="dialog" aria-modal="true" aria-labelledby="unifiedAuthTitle">
+            <div class="modal-window" style="max-width:440px;">
                 <div class="client-modal-tabs">
-                    <button class="client-modal-tab active" id="tabBtnClientLogin" type="button" onclick="app.switchClientAuthTab('login')">Вход в аккаунт</button>
-                    <button class="client-modal-tab" id="tabBtnClientRegister" type="button" onclick="app.switchClientAuthTab('register')">Быстрая регистрация</button>
+                    <button class="client-modal-tab active" id="tabBtnUnifiedLogin" type="button" onclick="app.switchAuthTab('login')">🔑 Вход в систему</button>
+                    <button class="client-modal-tab" id="tabBtnUnifiedRegister" type="button" onclick="app.switchAuthTab('register')">✨ Регистрация</button>
                 </div>
 
-                <!-- Форма входа клиента -->
-                <form id="clientLoginForm" onsubmit="app.loginClient(event)" style="margin-top: 1rem;">
-                    <h3 id="clientAuthTitle">Вход в личный кабинет</h3>
+                <!-- ФОРМА 1: ВХОД (ДЛЯ ВСЕХ: ВЛАДЕЛЕЦ АЛИМЖАН, ПЕРСОНАЛ, КЛИЕНТЫ) -->
+                <form id="unifiedLoginForm" onsubmit="app.submitUnifiedLogin(event)" style="margin-top: 1rem;">
+                    <h3 id="unifiedAuthTitle" style="font-size:1.15rem; margin-bottom:0.25rem;">Вход в аккаунт</h3>
+                    <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">Введите ваш номер телефона и пароль. Роль определяется автоматически.</p>
+
                     <div class="form-group" style="margin-top: 0.75rem;">
-                        <label for="clientLoginPhone">Ваш номер телефона:</label>
-                        <input type="tel" id="clientLoginPhone" placeholder="+7 (701) 000-00-00" required maxlength="25">
+                        <label for="unifiedLoginPhone">Номер телефона:</label>
+                        <input type="tel" id="unifiedLoginPhone" placeholder="+7 (701) 000-00-00" required maxlength="25" autocomplete="username">
                     </div>
+
                     <div class="form-group" style="margin-top: 0.75rem;">
-                        <label for="clientLoginPass">Пароль или PIN:</label>
-                        <input type="password" id="clientLoginPass" placeholder="••••" required minlength="4">
+                        <label for="unifiedLoginPass">Пароль:</label>
+                        <input type="password" id="unifiedLoginPass" placeholder="••••••••" required minlength="3" autocomplete="current-password">
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.25rem;">
-                        <button class="btn btn-outline" type="button" onclick="app.closeClientAuthModal()">Отмена</button>
-                        <button class="btn btn-primary" type="submit">Войти</button>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.25rem; gap:0.5rem;">
+                        <button class="btn btn-outline" type="button" onclick="app.closeAuthModal()">Отмена</button>
+                        <button class="btn btn-primary" type="submit" style="flex:1;">Войти</button>
+                    </div>
+
+                    <div style="margin-top:1rem; text-align:center;">
+                        <span class="text-muted" style="font-size:0.8rem;">Впервые на сайте? </span>
+                        <button type="button" onclick="app.switchAuthTab('register')" style="font-size:0.82rem; font-weight:600; color:var(--primary); background:none; border:none; cursor:pointer; padding:0;">Зарегистрироваться как клиент</button>
                     </div>
                 </form>
 
-                <!-- Форма регистрации клиента -->
-                <form id="clientRegisterForm" onsubmit="app.registerClient(event)" style="display:none; margin-top: 1rem;">
-                    <h3>Регистрация личного кабинета</h3>
-                    <p class="text-muted" style="font-size:0.85rem;">Создайте аккаунт, чтобы сохранять свои авто и управлять бронированиями.</p>
+                <!-- ФОРМА 2: РЕГИСТРАЦИЯ КЛИЕНТА (С ПРОВЕРКОЙ НОМЕРА SMS-КОДОМ) -->
+                <form id="unifiedRegisterForm" onsubmit="app.registerUnifiedClient(event)" style="display:none; margin-top: 1rem;">
+                    <h3 style="font-size:1.15rem; margin-bottom:0.25rem;">Регистрация клиента</h3>
+                    <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">Создайте аккаунт для сохранения своих авто и управления бронированиями.</p>
+
                     <div class="form-group" style="margin-top: 0.75rem;">
-                        <label for="clientRegName">Ваше имя *</label>
-                        <input type="text" id="clientRegName" placeholder="Алишер" required maxlength="30">
+                        <label for="unifiedRegName">Ваше имя *</label>
+                        <input type="text" id="unifiedRegName" placeholder="Например: Алишер" required maxlength="30" autocomplete="name">
                     </div>
+
                     <div class="form-group" style="margin-top: 0.75rem;">
-                        <label for="clientRegPhone">Номер телефона *</label>
-                        <input type="tel" id="clientRegPhone" placeholder="+7 (701) 000-00-00" required maxlength="25">
+                        <label for="unifiedRegPhone">Номер телефона *</label>
+                        <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
+                            <input type="tel" id="unifiedRegPhone" placeholder="+7 (701) 000-00-00" required maxlength="25" style="flex:1;" autocomplete="tel">
+                            <button class="btn btn-outline" type="button" id="btnSendSmsCode" onclick="app.sendVerificationCode()" style="white-space:nowrap; font-size:0.82rem; padding:0.4rem 0.65rem;">
+                                📲 Получить код
+                            </button>
+                        </div>
                     </div>
+
+                    <!-- Блок ввода проверочного кода -->
+                    <div id="smsCodeContainer" style="display:none; background:var(--bg-page); padding:0.85rem; border-radius:var(--radius); border:1px solid var(--border); margin-top:0.75rem;">
+                        <label for="unifiedRegCode" style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem;">Код из SMS-сообщения (4 цифры):</label>
+                        <div style="display:flex; gap:0.5rem;">
+                            <input type="text" id="unifiedRegCode" placeholder="4892" maxlength="6" inputmode="numeric" style="flex:1; font-size:1.15rem; letter-spacing:3px; font-weight:700; text-align:center;">
+                            <button class="btn btn-success" type="button" id="btnVerifyCode" onclick="app.confirmVerificationCode()" style="white-space:nowrap;">Проверить</button>
+                        </div>
+                        <div id="codeVerificationStatus" style="margin-top:0.5rem;"></div>
+                    </div>
+
                     <div class="form-group" style="margin-top: 0.75rem;">
-                        <label for="clientRegPass">Придумайте пароль (от 4 знаков) *</label>
-                        <input type="password" id="clientRegPass" placeholder="••••" required minlength="4">
+                        <label for="unifiedRegPass">Придумайте пароль (от 4 знаков) *</label>
+                        <input type="password" id="unifiedRegPass" placeholder="••••••••" required minlength="4" autocomplete="new-password">
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.25rem;">
-                        <button class="btn btn-outline" type="button" onclick="app.closeClientAuthModal()">Отмена</button>
-                        <button class="btn btn-success" type="submit">Зарегистрироваться</button>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.25rem; gap:0.5rem;">
+                        <button class="btn btn-outline" type="button" onclick="app.closeAuthModal()">Отмена</button>
+                        <button class="btn btn-primary" type="submit" style="flex:1;">Зарегистрироваться</button>
                     </div>
-                </form>
-            </div>
-        </div>
 
-        <!-- 2. МОДАЛЬНОЕ ОКНО: АВТОРИЗАЦИЯ СЛУЖЕБНЫХ РОЛЕЙ -->
-        <div class="modal-backdrop" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
-            <div class="modal-window auth-modal-large">
-                <h2 id="authModalTitle">Служебный вход</h2>
-                <p class="text-muted">Выберите роль для доступа к управлению автомойкой:</p>
-
-                <!-- Баннер блокировки при переборе паролей -->
-                <div id="authLockoutBanner" class="alert-box danger" style="display:none;" role="alert"></div>
-
-                <div class="role-grid-four" id="roleGridButtons">
-                    <!-- Режим Гостя -->
-                    <button class="role-card" type="button" onclick="app.loginAsGuest()">
-                        <div class="role-icon" aria-hidden="true">🚗</div>
-                        <div class="role-title">Клиент / Гость</div>
-                        <p>Бронирование времени, статус и гараж</p>
-                    </button>
-
-                    <!-- Режим Мойщика -->
-                    <button class="role-card" type="button" onclick="app.showWorkerSelector()">
-                        <div class="role-icon" aria-hidden="true">🧽</div>
-                        <div class="role-title">Мойщик</div>
-                        <p>Вход по PIN: свои боксы и заработок</p>
-                    </button>
-
-                    <!-- Режим Администратора -->
-                    <button class="role-card" type="button" onclick="app.showAdminLoginForm()">
-                        <div class="role-icon" aria-hidden="true">📋</div>
-                        <div class="role-title">Администратор</div>
-                        <p>10 боксов, заявки на бронь, расчет</p>
-                    </button>
-
-                    <!-- Режим Владельца -->
-                    <button class="role-card" type="button" onclick="app.showOwnerLoginForm()">
-                        <div class="role-icon" aria-hidden="true">👑</div>
-                        <div class="role-title">Владелец</div>
-                        <p>Касса, прибыль, зарплаты, настройки</p>
-                    </button>
-                </div>
-
-                <!-- Блок входа мойщика -->
-                <div id="workerSelectBlock" style="display: none; margin-top: 1.5rem;" class="sub-auth-block">
-                    <h3>Вход для Мойщика</h3>
-                    <form onsubmit="app.confirmWorkerLogin(event)">
-                        <div class="form-group" style="margin-top: 0.75rem;">
-                            <label for="workerModalSelect">Выберите сотрудника:</label>
-                            <select id="workerModalSelect" style="width: 100%;">
-                                <!-- Динамически -->
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin-top: 0.75rem;">
-                            <label for="workerPinInput">Введите PIN-код:</label>
-                            <input type="password" id="workerPinInput" placeholder="••••" autocomplete="current-password" inputmode="numeric" pattern="[0-9]*" maxlength="8">
-                        </div>
-                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                            <button class="btn btn-outline" type="button" onclick="app.hideWorkerSelector()">Назад</button>
-                            <button class="btn btn-primary" type="submit">Войти в смену</button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Блок входа администратора -->
-                <div id="adminPasswordBlock" style="display: none; margin-top: 1.5rem;" class="sub-auth-block">
-                    <h3>Вход для Администратора</h3>
-                    <form onsubmit="app.submitAdminLogin(event)">
-                        <div class="form-group" style="margin-top: 0.75rem;">
-                            <label for="adminModalSelect">Выберите администратора смены:</label>
-                            <select id="adminModalSelect" style="width: 100%;">
-                                <!-- Заполняется динамически именами администраторов -->
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin-top: 0.75rem;">
-                            <label for="adminPasswordInput">Введите пароль администратора / PIN:</label>
-                            <input type="password" id="adminPasswordInput" placeholder="••••" autocomplete="current-password">
-                        </div>
-                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                            <button class="btn btn-outline" type="button" onclick="app.hideAdminLoginForm()">Назад</button>
-                            <button class="btn btn-primary" type="submit">Войти как Администратор</button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Блок входа владельца -->
-                <div id="ownerPasswordBlock" style="display: none; margin-top: 1.5rem;" class="sub-auth-block">
-                    <h3>Вход для Владельца (Директора)</h3>
-                    <form onsubmit="app.submitOwnerLogin(event)">
-                        <div class="form-group" style="margin-top: 0.75rem;">
-                            <label for="ownerPasswordInput">Введите пароль владельца:</label>
-                            <input type="password" id="ownerPasswordInput" placeholder="••••" autocomplete="current-password">
-                        </div>
-                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                            <button class="btn btn-outline" type="button" onclick="app.hideOwnerLoginForm()">Назад</button>
-                            <button class="btn btn-primary" type="submit">Войти как Владелец</button>
-                        </div>
-                    </form>
-                    <div style="margin-top: 0.75rem; text-align: center;">
-                        <button class="btn-link" type="button" onclick="app.forgotPasswordPrompt()">
-                            Забыли пароль?
-                        </button>
+                    <div style="margin-top:1rem; text-align:center;">
+                        <span class="text-muted" style="font-size:0.8rem;">Уже зарегистрированы? </span>
+                        <button type="button" onclick="app.switchAuthTab('login')" style="font-size:0.82rem; font-weight:600; color:var(--primary); background:none; border:none; cursor:pointer; padding:0;">Войти в свой кабинет</button>
                     </div>
-                </div>
-
-                <div style="margin-top: 1.25rem; text-align: right;">
-                    <button class="btn btn-outline btn-sm" type="button" onclick="app.closeAuthModal()">Закрыть</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. МОДАЛЬНОЕ ОКНО: ПЕРВОНАЧАЛЬНАЯ НАСТРОЙКА -->
-        <div class="modal-backdrop" id="firstRunModal" role="dialog" aria-modal="true" aria-labelledby="firstRunTitle">
-            <div class="modal-window">
-                <h2 id="firstRunTitle">Первоначальная настройка</h2>
-                <p class="text-muted">Задайте пароли для защиты вашей автомойки. Пароли будут надёжно зашифрованы и сохранены только у вас.</p>
-
-                <form onsubmit="app.submitInitialSetup(event)" style="margin-top: 1rem;">
-                    <div class="form-group" style="margin-bottom: 0.75rem;">
-                        <label for="initOwnerPass">Придумайте пароль Владельца *</label>
-                        <input type="password" id="initOwnerPass" required minlength="4" placeholder="Минимум 4 символа">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0.75rem;">
-                        <label for="initAdminPass">Придумайте пароль Администратора *</label>
-                        <input type="password" id="initAdminPass" required minlength="4" placeholder="Для приема машин">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0.75rem;">
-                        <label for="initWorkerPin">PIN-код для Мойщиков *</label>
-                        <input type="password" id="initWorkerPin" required minlength="4" maxlength="8" inputmode="numeric" placeholder="4 цифры (например: 1111)">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 1rem;">
-                        <label for="initSecretPhrase">Секретное кодовое слово (для сброса пароля) *</label>
-                        <input type="password" id="initSecretPhrase" required minlength="4" placeholder="Запомните его на случай утери пароля">
-                    </div>
-                    <button class="btn btn-primary" style="width:100%;" type="submit">🚀 Завершить настройку и начать работу</button>
-                    <button class="btn btn-outline" style="width:100%; margin-top:0.5rem;" type="button" onclick="app.closeFirstRunModal()">Отмена</button>
                 </form>
             </div>
         </div>
