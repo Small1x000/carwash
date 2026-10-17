@@ -2319,9 +2319,12 @@ class CarWashApp {
         const name = document.getElementById('unifiedRegName').value.trim();
         const rawPhone = document.getElementById('unifiedRegPhone').value.trim();
         const pass = document.getElementById('unifiedRegPass').value;
+        const carPlate = (document.getElementById('unifiedRegPlate')?.value || '').trim().toUpperCase();
+        const carModel = (document.getElementById('unifiedRegModel')?.value || '').trim();
+        const carCategory = (document.getElementById('unifiedRegCategory')?.value || 'sedan');
 
         if (!name || !rawPhone || !pass) {
-            alert('Пожалуйста, заполните все обязательные поля.');
+            alert('Пожалуйста, заполните имя, номер телефона и пароль.');
             return;
         }
         if (pass.length < 4) {
@@ -2336,7 +2339,6 @@ class CarWashApp {
             return;
         }
 
-
         if (!Array.isArray(this.db.clients)) this.db.clients = [];
         const exists = this.db.clients.find(c => String(c.phone || '').replace(/\D/g, '').slice(-10) === last10);
         if (exists) {
@@ -2349,13 +2351,23 @@ class CarWashApp {
         const passHash = await Security.hash(pass, salt);
         const formattedPhone = this.formatPhoneNumber(rawPhone);
 
+        const initialCars = [];
+        if (carPlate) {
+            initialCars.push({
+                plate: carPlate,
+                model: carModel || 'Автомобиль',
+                category: carCategory,
+                addedAt: new Date().toISOString()
+            });
+        }
+
         const newClient = {
             id: 'c_' + Security.generateId(),
             name,
             phone: formattedPhone,
             passHash,
             salt,
-            cars: [],
+            cars: initialCars,
             createdAt: new Date().toISOString()
         };
 
@@ -2366,13 +2378,32 @@ class CarWashApp {
 
         const bookingNameEl = document.getElementById('bookingClientName');
         const bookingPhoneEl = document.getElementById('bookingClientPhone');
+        const bookingPlateEl = document.getElementById('bookingPlate');
+        const bookingModelEl = document.getElementById('bookingModel');
+        const bookingCatEl = document.getElementById('bookingCategory');
+
         if (bookingNameEl) bookingNameEl.value = newClient.name;
         if (bookingPhoneEl) bookingPhoneEl.value = newClient.phone;
+        if (carPlate) {
+            if (bookingPlateEl) bookingPlateEl.value = carPlate;
+            if (bookingModelEl) bookingModelEl.value = carModel || 'Автомобиль';
+            if (bookingCatEl) bookingCatEl.value = carCategory;
+        }
 
+        this.switchTab('guestBooking');
         this.populateBookingCarDropdown();
         this.applyRoleUI();
         this.renderAll();
-        alert(`🎉 Добро пожаловать, ${name}! Личный кабинет успешно создан.`);
+
+        const bookingSection = document.getElementById('bookingFormCard') || document.getElementById('bookingPlate');
+        if (bookingSection) {
+            bookingSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        const welcomeCarMsg = carPlate 
+            ? `🎉 Добро пожаловать, ${name}!\n\nАвтомобиль «${carPlate}» (${carModel || 'Авто'}) успешно сохранён в ваш гараж.\nТеперь выберите удобное время и услуги для записи в очередь!`
+            : `🎉 Добро пожаловать, ${name}! Личный кабинет успешно создан.`;
+        alert(welcomeCarMsg);
     }
 
     registerClient(event) {
@@ -3566,6 +3597,27 @@ class CarWashApp {
         }
 
         this.db.bookings.unshift(newBooking);
+
+        // Автоматически сохраняем автомобиль в гараж клиента, если его там ещё нет
+        if (this.currentClient) {
+            if (!Array.isArray(this.currentClient.cars)) this.currentClient.cars = [];
+            const cleanPlate = carPlate.replace(/\s+/g, '').toUpperCase();
+            const carExists = this.currentClient.cars.some(c => (c.plate || '').replace(/\s+/g, '').toUpperCase() === cleanPlate);
+            if (!carExists) {
+                this.currentClient.cars.push({
+                    plate: carPlate,
+                    model: carModel || 'Автомобиль',
+                    category: category || 'sedan',
+                    addedAt: new Date().toISOString()
+                });
+                const dbClient = (this.db.clients || []).find(c => c.id === this.currentClient.id);
+                if (dbClient) {
+                    dbClient.cars = this.currentClient.cars;
+                }
+                this.saveClientSession(this.currentClient);
+            }
+        }
+
         this.saveDatabase();
 
         if (!this.currentClient) {
@@ -5216,7 +5268,7 @@ class CarWashApp {
         const smsLogin = document.getElementById('smsLoginInput');
         const smsPass = document.getElementById('smsPasswordInput');
         const smsSender = document.getElementById('smsSenderInput');
-        if (smsProv) smsProv.value = gw.provider || 'firebase';
+        if (smsProv) smsProv.value = gw.provider || 'none';
         if (smsFbKey) smsFbKey.value = gw.firebaseApiKey || (this.db.cloud && this.db.cloud.apiKey) || '';
         if (smsLogin) smsLogin.value = gw.login || '';
         if (smsPass) smsPass.value = gw.password || gw.apiKey || '';
@@ -5247,23 +5299,17 @@ class CarWashApp {
         const badge = document.getElementById('smsGatewayStatusBadge');
 
         if (badge) {
-            badge.textContent = val === 'firebase' ? 'Google Firebase' : (val === 'smsc' ? 'SMSC.kz' : (val === 'mobizon' ? 'Mobizon.kz' : 'Webhook'));
+            badge.textContent = (val === 'none' || !val) ? 'Без SMS' : (val === 'smsc' ? 'SMSC.kz' : (val === 'mobizon' ? 'Mobizon.kz' : 'Webhook'));
         }
 
-        if (val === 'firebase') {
-            if (fbGrp) fbGrp.style.display = 'block';
+        if (val === 'none' || val === 'firebase') {
+            if (fbGrp) fbGrp.style.display = 'none';
             if (loginGrp) loginGrp.style.display = 'none';
             if (passGrp) passGrp.style.display = 'none';
             if (senderGrp) senderGrp.style.display = 'none';
             if (helpEl) {
                 helpEl.innerHTML = `
-                    <strong>🔥 Реальные SMS от Google (10 000 в месяц БЕСПЛАТНО):</strong>
-                    <ol style="margin:0.35rem 0 0 1.25rem; padding:0; line-height:1.4;">
-                        <li>Откройте <a href="https://console.firebase.google.com/project/carwash-d727e/authentication" target="_blank" rel="noopener" style="color:var(--primary); font-weight:600;">консоль Firebase (Authentication)</a> -> вкладка <strong>Sign-in method</strong> -> включите <strong>«Phone»</strong>.</li>
-                        <li>Во вкладке <strong>Settings</strong> -> <strong>Authorized domains</strong> добавьте домен <code>small1x000.github.io</code>.</li>
-                        <li>Откройте Настройки проекта (Project settings) -> скопируйте <strong>Web API Key</strong> и вставьте в поле выше.</li>
-                    </ol>
-                    После этого Google будет сам бесплатно отправлять реальные SMS на любые сотовые телефоны Казахстана (+7...) с проверкой существования номера!
+                    ✅ <strong>Регистрация без SMS активна:</strong> клиенты указывают имя, номер телефона и пароль, и сразу получают доступ к кабинету без ожидания кодов.
                 `;
             }
         } else if (val === 'smsc') {
