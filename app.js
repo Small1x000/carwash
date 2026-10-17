@@ -1732,45 +1732,31 @@ class CarWashApp {
             alert(`📲 Реальное SMS с проверочным кодом отправлено на номер ${this.formatPhoneNumber(rawPhone)}! Пожалуйста, проверьте входящие SMS на вашем телефоне.`);
         } else {
             console.warn('[SMS Dispatch Result]', res);
-            let errMsg = '';
-            if (res.reason === 'api_key_missing') {
-                errMsg = `⚠️ Для отправки реальных SMS от Google на ваш телефон, владелец должен вставить Firebase Web API Key в Настройках.`;
-            } else if (res.reason === 'firebase_error') {
-                const fbCode = (res.error && res.error.code) || '';
-                if (fbCode === 'auth/operation-not-allowed') {
-                    errMsg = `⚠️ В консоли Firebase еще не включен провайдер "Phone" (раздел Authentication -> Sign-in method -> Phone).`;
-                } else if (fbCode === 'auth/invalid-phone-number') {
-                    errMsg = `❌ Неверный формат номера телефона. Введите номер мобильного в формате Казахстана (+7 701...).`;
-                } else {
-                    errMsg = `⚠️ Ошибка отправки SMS: ${res.error && res.error.message ? res.error.message : 'Проверьте доступность номера'}`;
-                }
-            } else if (res.reason === 'not_configured') {
-                errMsg = `⚠️ SMS-шлюз еще не подключен в Настройках владельца.`;
-            } else {
-                errMsg = `⚠️ Ошибка отправки SMS (${res.reason || 'шлюз недоступен'}).`;
+            let errMsg = '⚠️ Не удалось доставить SMS на этот номер.';
+            if (res.reason === 'firebase_error' && res.error && res.error.code === 'auth/invalid-phone-number') {
+                errMsg = '❌ Неверный формат номера телефона. Введите номер мобильного в формате Казахстана (+7 701...).';
             }
 
             if (statusEl) {
-                statusEl.innerHTML = `<div style="color:#b45309; background:#fffbeb; border:1px solid #fde68a; padding:0.5rem 0.75rem; border-radius:6px; font-size:0.82rem; margin-top:0.35rem;">
-                    ${errMsg}
-                    <div style="margin-top:0.35rem; font-weight:600; color:#334155;">
-                        💡 Резервный проверочный код для регистрации: <strong style="color:var(--primary); font-size:1.05rem; letter-spacing:2px;">${code}</strong>
-                    </div>
-                </div>`;
-            }
-
-            if (helpEl) {
-                helpEl.innerHTML = `
-                    <div style="margin-top:0.4rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
-                        <button type="button" class="btn btn-outline btn-sm" onclick="app.sendCodeViaWhatsapp('${rawPhone}', '${code}')" style="font-size:0.78rem;">
-                            💬 Проверить номер через WhatsApp
+                statusEl.innerHTML = `
+                    <div style="color: #92400e; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.83rem; margin-top: 0.4rem;">
+                        <strong>${errMsg}</strong>
+                        <div style="margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);">
+                            Проверьте доступность сети или мгновенно подтвердите номер через WhatsApp:
+                        </div>
+                        <button type="button" class="btn btn-sm" onclick="app.sendCodeViaWhatsapp('${rawPhone}', '${code}')" style="margin-top: 0.5rem; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: #25D366; border: 1px solid #22c55e; color: #ffffff; font-weight: 700; font-size: 0.82rem; border-radius: 6px; padding: 0.45rem;">
+                            💬 Получить проверочный код в WhatsApp
                         </button>
                     </div>
                 `;
             }
 
+            if (helpEl) {
+                helpEl.innerHTML = '';
+            }
+
             if (codeInput) {
-                codeInput.placeholder = code;
+                codeInput.placeholder = 'Код из сообщения';
             }
         }
 
@@ -2136,45 +2122,31 @@ class CarWashApp {
             alert(`📲 Реальное SMS с проверочным кодом отправлено на номер ${this.formatPhoneNumber(rawPhone)}! Пожалуйста, проверьте входящие SMS на вашем телефоне.`);
         } else {
             console.warn('[SMS Forgot Dispatch Result]', res);
-            let errMsg = '';
-            if (res.reason === 'api_key_missing') {
-                errMsg = `⚠️ Для отправки реальных SMS от Google на ваш телефон, владелец должен вставить Firebase Web API Key в Настройках.`;
-            } else if (res.reason === 'firebase_error') {
-                const fbCode = (res.error && res.error.code) || '';
-                if (fbCode === 'auth/operation-not-allowed') {
-                    errMsg = `⚠️ В консоли Firebase еще не включен провайдер "Phone" (раздел Authentication -> Sign-in method -> Phone).`;
-                } else if (fbCode === 'auth/invalid-phone-number') {
-                    errMsg = `❌ Неверный формат номера телефона. Введите номер мобильного в формате Казахстана (+7 701...).`;
-                } else {
-                    errMsg = `⚠️ Ошибка отправки SMS: ${res.error && res.error.message ? res.error.message : 'Проверьте доступность номера'}`;
-                }
-            } else if (res.reason === 'not_configured') {
-                errMsg = `⚠️ SMS-шлюз еще не подключен в Настройках владельца.`;
-            } else {
-                errMsg = `⚠️ Ошибка отправки SMS (${res.reason || 'шлюз недоступен'}).`;
+            let errMsg = '⚠️ Не удалось доставить SMS на этот номер.';
+            if (res.reason === 'firebase_error' && res.error && res.error.code === 'auth/invalid-phone-number') {
+                errMsg = '❌ Неверный формат номера телефона. Введите номер мобильного в формате Казахстана (+7 701...).';
             }
 
             if (statusEl) {
-                statusEl.innerHTML = `<div style="color:#b45309; background:#fffbeb; border:1px solid #fde68a; padding:0.5rem 0.75rem; border-radius:6px; font-size:0.82rem; margin-top:0.35rem;">
-                    ${errMsg}
-                    <div style="margin-top:0.35rem; font-weight:600; color:#334155;">
-                        💡 Резервный проверочный код для восстановления: <strong style="color:var(--primary); font-size:1.05rem; letter-spacing:2px;">${code}</strong>
-                    </div>
-                </div>`;
-            }
-
-            if (helpEl) {
-                helpEl.innerHTML = `
-                    <div style="margin-top:0.4rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
-                        <button type="button" class="btn btn-outline btn-sm" onclick="app.sendCodeViaWhatsapp('${rawPhone}', '${code}')" style="font-size:0.78rem;">
-                            💬 Проверить номер через WhatsApp
+                statusEl.innerHTML = `
+                    <div style="color: #92400e; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); padding: 0.65rem 0.85rem; border-radius: 8px; font-size: 0.83rem; margin-top: 0.4rem;">
+                        <strong>${errMsg}</strong>
+                        <div style="margin-top: 0.25rem; font-size: 0.8rem; color: var(--text-muted);">
+                            Проверьте доступность сети или мгновенно подтвердите номер через WhatsApp:
+                        </div>
+                        <button type="button" class="btn btn-sm" onclick="app.sendCodeViaWhatsapp('${rawPhone}', '${code}')" style="margin-top: 0.5rem; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: #25D366; border: 1px solid #22c55e; color: #ffffff; font-weight: 700; font-size: 0.82rem; border-radius: 6px; padding: 0.45rem;">
+                            💬 Получить проверочный код в WhatsApp
                         </button>
                     </div>
                 `;
             }
 
+            if (helpEl) {
+                helpEl.innerHTML = '';
+            }
+
             if (codeInput) {
-                codeInput.placeholder = code;
+                codeInput.placeholder = 'Код из сообщения';
             }
         }
 
