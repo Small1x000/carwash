@@ -443,6 +443,204 @@ body.role-guest .client-account-bar {
     margin-bottom: 0.25rem;
 }
 
+/* ==================== РЕАЛИСТИЧНЫЕ ГОСНОМЕРА (KZ И RU) ==================== */
+.license-plate {
+    display: inline-flex;
+    align-items: center;
+    background: #ffffff;
+    background: linear-gradient(180deg, #ffffff 0%, #f9fafb 45%, #f1f5f9 100%);
+    color: #111827;
+    border: 1.5px solid #111827;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    font-family: 'DIN Alternate', 'DIN 1451', 'Roboto Mono', 'SF Pro Display', monospace, -apple-system, sans-serif;
+    font-weight: 800;
+    line-height: 1;
+    overflow: hidden;
+    vertical-align: middle;
+    user-select: all;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.license-plate:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.license-plate .plate-divider {
+    width: 1.5px;
+    background-color: #111827;
+    align-self: stretch;
+}
+
+/* Казахстанский госномер */
+.plate-kz {
+    height: 32px;
+}
+
+.plate-kz-flag-box {
+    background: #00afca;
+    padding: 2px 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
+    min-width: 24px;
+    border-right: 1.5px solid #111827;
+    box-sizing: border-box;
+}
+
+.plate-kz-flag {
+    display: block;
+    border-radius: 1px;
+    box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.2);
+}
+
+.plate-kz-country {
+    font-size: 8px;
+    font-weight: 900;
+    color: #0b1320;
+    letter-spacing: 0.5px;
+    margin-top: 1.5px;
+    line-height: 1;
+}
+
+.plate-kz-main {
+    padding: 0 8px;
+    font-size: 15px;
+    letter-spacing: 1.5px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.plate-kz-region {
+    padding: 0 7px;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    min-width: 24px;
+    text-align: center;
+    color: #0f172a;
+}
+
+/* Российский госномер */
+.plate-ru {
+    height: 32px;
+}
+
+.plate-ru-main {
+    padding: 0 7px;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    color: #0f172a;
+}
+
+.plate-ru-main .ru-char {
+    font-size: 12.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.plate-ru-main .ru-num {
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.plate-ru-region-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1px 5px;
+    min-width: 28px;
+    align-self: stretch;
+    box-sizing: border-box;
+}
+
+.plate-ru-region-box .ru-region-code {
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: 0.5px;
+    color: #0f172a;
+}
+
+.plate-ru-region-box .ru-flag-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-top: 1px;
+}
+
+.plate-ru-region-box .ru-country {
+    font-size: 7.5px;
+    font-weight: 900;
+    letter-spacing: 0.3px;
+    line-height: 1;
+    color: #0f172a;
+}
+
+.plate-ru-flag {
+    display: inline-block;
+    border-radius: 0.5px;
+    box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.2);
+}
+
+/* Универсальный/другой госномер */
+.plate-gen {
+    height: 30px;
+    padding: 0 8px;
+    gap: 6px;
+    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+    border: 1.5px solid #334155;
+}
+
+.plate-gen-icon {
+    font-size: 13px;
+}
+
+.plate-gen-text {
+    font-size: 13.5px;
+    letter-spacing: 1px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+/* Превью при вводе номера */
+.plate-input-preview {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 0.4rem;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+[data-theme="dark"] .license-plate {
+    background: #ffffff;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f4f6 45%, #e2e8f0 100%);
+    color: #111827;
+    border-color: #111827;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+[data-theme="dark"] .license-plate .plate-kz-main,
+[data-theme="dark"] .license-plate .plate-kz-region,
+[data-theme="dark"] .license-plate .plate-ru-main,
+[data-theme="dark"] .license-plate .plate-ru-region-box .ru-region-code,
+[data-theme="dark"] .license-plate .plate-ru-region-box .ru-country,
+[data-theme="dark"] .license-plate .plate-gen-text {
+    color: #0f172a;
+}
+
 /* ==================== БРОНИРОВАНИЯ (КЛИЕНТ И АДМИН) ==================== */
 .bookings-stream {
     display: flex;

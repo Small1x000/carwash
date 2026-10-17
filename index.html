@@ -6,7 +6,7 @@
     <meta name="description" content="CarWash Tracker — профессиональная система управления автомойкой: 10 боксов, онлайн-бронирование, личный кабинет клиента, расчет заказов.">
     <title>CarWash Tracker | Управление автомойкой</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
-    <link rel="stylesheet" href="style.css?v=3.4">
+    <link rel="stylesheet" href="style.css?v=3.5">
     <script>
         (function() {
             var t = localStorage.getItem('carwash_theme');
@@ -180,7 +180,8 @@
                                 <div class="form-grid" id="bookingCustomCarFields">
                                     <div class="form-group">
                                         <label for="bookingPlate" data-i18n="bookingPlate">Госномер авто *</label>
-                                        <input type="text" id="bookingPlate" placeholder="например, 777 AAA 01" data-i18n-placeholder="platePlaceholder" required maxlength="15" autocomplete="off">
+                                        <input type="text" id="bookingPlate" placeholder="777 AAA 01 (KZ) или А 777 АА 77 (RU)" data-i18n-placeholder="platePlaceholder" required maxlength="15" autocomplete="off" style="text-transform: uppercase;">
+                                        <div id="bookingPlate_preview" class="plate-input-preview" style="display: none; margin-top: 0.4rem;"></div>
                                     </div>
                                     <div class="form-group">
                                         <label for="bookingModel" data-i18n="bookingModel">Марка и модель</label>
@@ -272,7 +273,8 @@
                         <form id="addCarForm" onsubmit="app.addClientCar(event)" style="margin-top: 1rem;">
                             <div class="form-group" style="margin-bottom: 0.75rem;">
                                 <label for="garagePlate" data-i18n="garagePlate">Госномер *</label>
-                                <input type="text" id="garagePlate" placeholder="например, 777 AAA 01" data-i18n-placeholder="platePlaceholder" required maxlength="15" autocomplete="off">
+                                <input type="text" id="garagePlate" placeholder="777 AAA 01 (KZ) или А 777 АА 77 (RU)" data-i18n-placeholder="platePlaceholder" required maxlength="15" autocomplete="off" style="text-transform: uppercase;">
+                                <div id="garagePlate_preview" class="plate-input-preview" style="display: none; margin-top: 0.4rem;"></div>
                             </div>
                             <div class="form-group" style="margin-bottom: 0.75rem;">
                                 <label for="garageModel" data-i18n="garageModel">Марка и модель *</label>
@@ -300,7 +302,10 @@
                     <p class="text-muted" data-i18n="guestSearchDesc">Введите госномер вашего авто, чтобы узнать статус мойки в реальном времени:</p>
                     
                     <form class="guest-search-form" onsubmit="app.searchCarStatus(event)">
-                        <input type="text" id="guestSearchPlate" placeholder="например, 777 AAA 01" data-i18n-placeholder="platePlaceholder" required autocomplete="off" maxlength="15" aria-label="Госномер автомобиля">
+                        <div style="flex:1; display:flex; flex-direction:column;">
+                            <input type="text" id="guestSearchPlate" placeholder="777 AAA 01 (KZ) или А 777 АА 77 (RU)" data-i18n-placeholder="platePlaceholder" required autocomplete="off" maxlength="15" aria-label="Госномер автомобиля" style="text-transform: uppercase; width:100%;">
+                            <div id="guestSearchPlate_preview" class="plate-input-preview" style="display: none; margin-top: 0.4rem;"></div>
+                        </div>
                         <button type="submit" class="btn btn-primary" id="guestSearchBtn" data-i18n="guestSearchBtn">Проверить</button>
                     </form>
 
@@ -551,7 +556,8 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="carPlate">Госномер авто *</label>
-                                <input type="text" id="carPlate" placeholder="например, 777 AAA 01" required autocomplete="off" maxlength="15">
+                                <input type="text" id="carPlate" placeholder="777 AAA 01 (KZ) или А 777 АА 77 (RU)" required autocomplete="off" maxlength="15" style="text-transform: uppercase;">
+                                <div id="carPlate_preview" class="plate-input-preview" style="display: none; margin-top: 0.4rem;"></div>
                             </div>
 
                             <div class="form-group">
@@ -1066,7 +1072,8 @@
                         </div>
                         <div class="form-group">
                             <label for="unifiedRegPlate" style="font-size: 0.82rem;">Госномер автомобиля *</label>
-                            <input type="text" id="unifiedRegPlate" placeholder="например, 777 AAA 01" required maxlength="15" autocomplete="off" style="text-transform: uppercase;">
+                            <input type="text" id="unifiedRegPlate" placeholder="777 AAA 01 (KZ) или А 777 АА 77 (RU)" required maxlength="15" autocomplete="off" style="text-transform: uppercase;">
+                            <div id="unifiedRegPlate_preview" class="plate-input-preview" style="display: none; margin-top: 0.4rem;"></div>
                         </div>
                         <div class="form-group" style="margin-top: 0.5rem;">
                             <label for="unifiedRegModel" style="font-size: 0.82rem;">Марка и модель авто *</label>
@@ -1217,6 +1224,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
     <!-- Основной скрипт -->
-    <script src="app.js?v=3.4"></script>
+    <script src="app.js?v=3.5"></script>
 </body>
 </html>

@@ -73,6 +73,186 @@ const Security = {
     }
 };
 
+// ==================== РЕАЛИСТИЧНЫЕ ГОСНОМЕРА (KZ & RU) ====================
+const PlateHelper = {
+    // Таблицы соответствия похожих букв кириллицы и латиницы
+    cyrToLatKZ: {
+        'А': 'A', 'В': 'B', 'С': 'C', 'Е': 'E', 'Н': 'H',
+        'К': 'K', 'М': 'M', 'О': 'O', 'Р': 'P', 'Т': 'T',
+        'Х': 'X', 'У': 'Y'
+    },
+    latToCyrRU: {
+        'A': 'А', 'B': 'В', 'C': 'С', 'E': 'Е', 'H': 'Н',
+        'K': 'К', 'M': 'М', 'O': 'О', 'P': 'Р', 'T': 'Т',
+        'X': 'Х', 'Y': 'У'
+    },
+
+    parse(str) {
+        if (!str) return null;
+        const clean = String(str).trim().toUpperCase();
+        const noSpaces = clean.replace(/[\s\-_]+/g, '');
+
+        // 1. Проверка на казахстанский номер (KZ)
+        // Физические лица: 3 цифры + 3 латинские буквы + 2 цифры региона (777 AAA 01)
+        // Юридические лица / ранние: 3 цифры + 2 латинские буквы + 2 цифры региона (123 AB 01)
+        const kzClean = noSpaces.replace(/[АВСЕНКМОРТХУ]/g, ch => this.cyrToLatKZ[ch] || ch);
+        const kzMatch = kzClean.match(/^(\d{3})([A-Z]{2,3})(\d{2})?$/);
+        if (kzMatch) {
+            return {
+                country: 'KZ',
+                digits: kzMatch[1],
+                letters: kzMatch[2],
+                region: kzMatch[3] || '01',
+                formatted: kzMatch[3] ? `${kzMatch[1]} ${kzMatch[2]} ${kzMatch[3]}` : `${kzMatch[1]} ${kzMatch[2]}`
+            };
+        }
+
+        // 2. Проверка на российский номер (RU ГОСТ)
+        // 1 буква + 3 цифры + 2 буквы + 2 или 3 цифры региона (А 777 АА 77)
+        const ruClean = noSpaces.replace(/[ABCEHKMOPTXY]/g, ch => this.latToCyrRU[ch] || ch);
+        const ruMatch = ruClean.match(/^([А-Я])(\d{3})([А-Я]{2})(\d{2,3})?$/);
+        if (ruMatch) {
+            return {
+                country: 'RU',
+                firstLetter: ruMatch[1],
+                digits: ruMatch[2],
+                lastLetters: ruMatch[3],
+                region: ruMatch[4] || '77',
+                formatted: ruMatch[4] ? `${ruMatch[1]} ${ruMatch[2]} ${ruMatch[3]} ${ruMatch[4]}` : `${ruMatch[1]} ${ruMatch[2]} ${ruMatch[3]}`
+            };
+        }
+
+        return {
+            country: 'OTHER',
+            formatted: clean
+        };
+    },
+
+    format(str) {
+        const parsed = this.parse(str);
+        if (!parsed) return str;
+        return parsed.formatted || str;
+    },
+
+    formatInput(val) {
+        if (!val) return '';
+        const str = String(val).toUpperCase();
+        const firstChar = str.trim()[0];
+        if (!firstChar) return '';
+
+        // Начинается с цифры -> казахстанский формат (KZ: 777 AAA 01)
+        if (/[0-9]/.test(firstChar)) {
+            let clean = str.replace(/[^0-9A-ZА-Я]/gi, '').toUpperCase();
+            clean = clean.replace(/[АВСЕНКМОРТХУ]/g, ch => this.cyrToLatKZ[ch] || ch);
+
+            let digits = '';
+            let letters = '';
+            let region = '';
+
+            let i = 0;
+            while (i < clean.length && /[0-9]/.test(clean[i]) && digits.length < 3) {
+                digits += clean[i++];
+            }
+            while (i < clean.length && /[A-Z]/.test(clean[i]) && letters.length < 3) {
+                letters += clean[i++];
+            }
+            while (i < clean.length && /[0-9]/.test(clean[i]) && region.length < 2) {
+                region += clean[i++];
+            }
+
+            let res = digits;
+            if (letters) res += ' ' + letters;
+            if (region) res += ' ' + region;
+            return res;
+        }
+
+        // Начинается с буквы -> российский формат (RU: А 777 АА 77)
+        let clean = str.replace(/[^0-9A-ZА-Я]/gi, '').toUpperCase();
+        clean = clean.replace(/[ABCEHKMOPTXY]/g, ch => this.latToCyrRU[ch] || ch);
+
+        let l1 = '';
+        let digits = '';
+        let l2 = '';
+        let region = '';
+
+        let i = 0;
+        if (i < clean.length && /[А-Я]/.test(clean[i])) {
+            l1 = clean[i++];
+        }
+        while (i < clean.length && /[0-9]/.test(clean[i]) && digits.length < 3) {
+            digits += clean[i++];
+        }
+        while (i < clean.length && /[А-Я]/.test(clean[i]) && l2.length < 2) {
+            l2 += clean[i++];
+        }
+        while (i < clean.length && /[0-9]/.test(clean[i]) && region.length < 3) {
+            region += clean[i++];
+        }
+
+        let res = l1;
+        if (digits) res += ' ' + digits;
+        if (l2) res += ' ' + l2;
+        if (region) res += ' ' + region;
+        return res;
+    },
+
+    renderBadge(plateStr) {
+        if (!plateStr) return '<span class="license-plate plate-gen"><span class="plate-gen-icon">🚗</span><span class="plate-gen-text">—</span></span>';
+        const parsed = this.parse(plateStr);
+
+        if (parsed && parsed.country === 'KZ') {
+            return `
+                <span class="license-plate plate-kz" title="🇰🇿 Госномер Республики Казахстан: ${Security.escapeHTML(parsed.formatted)}">
+                    <span class="plate-kz-flag-box">
+                        <svg class="plate-kz-flag" viewBox="0 0 24 16" width="16" height="11">
+                            <rect width="24" height="16" fill="#00afca"/>
+                            <circle cx="13" cy="7.5" r="3" fill="#fecb00"/>
+                            <path d="M9 11.5 C11 10.5 15 10.5 17 11.5 C15 12.2 11 12.2 9 11.5 Z" fill="#fecb00"/>
+                            <path d="M1.5 2 L2.8 3.5 L1.5 5 L2.8 6.5 L1.5 8 L2.8 9.5 L1.5 11 L2.8 12.5 L1.5 14" stroke="#fecb00" stroke-width="1.2" fill="none"/>
+                        </svg>
+                        <span class="plate-kz-country">KZ</span>
+                    </span>
+                    <span class="plate-kz-main">${Security.escapeHTML(parsed.digits)}&nbsp;${Security.escapeHTML(parsed.letters)}</span>
+                    <span class="plate-divider"></span>
+                    <span class="plate-kz-region">${Security.escapeHTML(parsed.region)}</span>
+                </span>
+            `.trim();
+        }
+
+        if (parsed && parsed.country === 'RU') {
+            return `
+                <span class="license-plate plate-ru" title="🇷🇺 Госномер Российской Федерации: ${Security.escapeHTML(parsed.formatted)}">
+                    <span class="plate-ru-main">
+                        <span class="ru-char">${Security.escapeHTML(parsed.firstLetter)}</span>
+                        <span class="ru-num">${Security.escapeHTML(parsed.digits)}</span>
+                        <span class="ru-char">${Security.escapeHTML(parsed.lastLetters)}</span>
+                    </span>
+                    <span class="plate-divider"></span>
+                    <span class="plate-ru-region-box">
+                        <span class="ru-region-code">${Security.escapeHTML(parsed.region)}</span>
+                        <span class="ru-flag-row">
+                            <span class="ru-country">RUS</span>
+                            <svg class="plate-ru-flag" viewBox="0 0 12 8" width="11" height="7">
+                                <rect width="12" height="2.67" y="0" fill="#ffffff"/>
+                                <rect width="12" height="2.67" y="2.67" fill="#0039a6"/>
+                                <rect width="12" height="2.67" y="5.33" fill="#d52b1e"/>
+                                <rect width="12" height="8" fill="none" stroke="#6b7280" stroke-width="0.5"/>
+                            </svg>
+                        </span>
+                    </span>
+                </span>
+            `.trim();
+        }
+
+        return `
+            <span class="license-plate plate-gen" title="Госномер: ${Security.escapeHTML(plateStr)}">
+                <span class="plate-gen-icon">🚗</span>
+                <span class="plate-gen-text">${Security.escapeHTML(plateStr)}</span>
+            </span>
+        `.trim();
+    }
+};
+
 // ==================== МНОГОЯЗЫЧНЫЙ СЛОВАРЬ (I18N: RU, KK, EN) ====================
 const TRANSLATIONS = {
     ru: {
@@ -123,7 +303,7 @@ const TRANSLATIONS = {
         bookingCarSelect: 'Выберите автомобиль *',
         bookingNewCar: '+ Ввести другой автомобиль...',
         bookingPlate: 'Госномер авто *',
-        platePlaceholder: 'например, 777 AAA 01',
+        platePlaceholder: '777 AAA 01 (KZ) или А 777 АА 77 (RU)',
         bookingModel: 'Марка и модель',
         modelPlaceholder: 'например, Toyota Camry',
         bookingCategory: 'Класс кузова *',
@@ -333,7 +513,7 @@ const TRANSLATIONS = {
         bookingCarSelect: 'Көлікті таңдаңыз *',
         bookingNewCar: '+ Басқа көлікті енгізу...',
         bookingPlate: 'Мемлекеттік нөмірі *',
-        platePlaceholder: 'мысалы, 777 AAA 01',
+        platePlaceholder: '777 AAA 01 (KZ) немесе А 777 АА 77 (RU)',
         bookingModel: 'Маркасы және моделі',
         modelPlaceholder: 'мысалы, Toyota Camry',
         bookingCategory: 'Шанақ класы *',
@@ -543,7 +723,7 @@ const TRANSLATIONS = {
         bookingCarSelect: 'Select Vehicle *',
         bookingNewCar: '+ Enter another vehicle...',
         bookingPlate: 'License Plate *',
-        platePlaceholder: 'e.g., 777 AAA 01',
+        platePlaceholder: '777 AAA 01 (KZ) or А 777 АА 77 (RU)',
         bookingModel: 'Make & Model',
         modelPlaceholder: 'e.g., Toyota Camry',
         bookingCategory: 'Vehicle Class *',
@@ -962,6 +1142,7 @@ class CarWashApp {
                 if (data && data.id) {
                     const found = (this.db.clients || []).find(c => c.id === data.id);
                     this.currentClient = found || data;
+                    this.mergeGuestCarsIntoClient(this.currentClient);
                     return;
                 }
             }
@@ -974,6 +1155,9 @@ class CarWashApp {
 
     saveClientSession(client) {
         this.currentClient = client || null;
+        if (client && client.id) {
+            this.mergeGuestCarsIntoClient(client);
+        }
         try {
             if (client && client.id) {
                 const sessionData = {
@@ -988,6 +1172,78 @@ class CarWashApp {
                 sessionStorage.removeItem(CLIENT_SESSION_KEY);
             }
         } catch (e) {}
+    }
+
+    getClientCars() {
+        if (this.currentClient && Array.isArray(this.currentClient.cars)) {
+            return this.currentClient.cars;
+        }
+        return this.getGuestCars();
+    }
+
+    getGuestCars() {
+        try {
+            const raw = localStorage.getItem('carwash_guest_cars');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) return parsed;
+            }
+        } catch (e) {
+            console.warn('Ошибка чтения авто гостя:', e);
+        }
+        return [];
+    }
+
+    saveGuestCars(cars) {
+        try {
+            localStorage.setItem('carwash_guest_cars', JSON.stringify(cars || []));
+        } catch (e) {
+            console.warn('Ошибка сохранения авто гостя:', e);
+        }
+    }
+
+    saveClientCars(cars) {
+        if (this.currentClient) {
+            this.currentClient.cars = cars || [];
+            const dbClient = (this.db.clients || []).find(c => c.id === this.currentClient.id);
+            if (dbClient) {
+                dbClient.cars = this.currentClient.cars;
+            }
+            this.saveDatabase();
+            this.saveClientSession(this.currentClient);
+        } else {
+            this.saveGuestCars(cars);
+        }
+    }
+
+    mergeGuestCarsIntoClient(client) {
+        if (!client) return;
+        const guestCars = this.getGuestCars();
+        if (!guestCars || guestCars.length === 0) return;
+
+        if (!Array.isArray(client.cars)) client.cars = [];
+        let addedCount = 0;
+
+        guestCars.forEach(gc => {
+            const clean = (gc.plate || '').replace(/[\s\-_]+/g, '').toUpperCase();
+            if (clean && !client.cars.some(c => (c.plate || '').replace(/[\s\-_]+/g, '').toUpperCase() === clean)) {
+                client.cars.push(gc);
+                addedCount++;
+            }
+        });
+
+        if (addedCount > 0) {
+            const dbClient = (this.db.clients || []).find(c => c.id === client.id);
+            if (dbClient) dbClient.cars = client.cars;
+            this.saveDatabase();
+        }
+        try {
+            localStorage.removeItem('carwash_guest_cars');
+        } catch (e) {}
+    }
+
+    renderPlateBadge(plate) {
+        return PlateHelper.renderBadge(plate);
     }
 
     saveDatabase() {
@@ -2351,10 +2607,11 @@ class CarWashApp {
         const passHash = await Security.hash(pass, salt);
         const formattedPhone = this.formatPhoneNumber(rawPhone);
 
+        const formattedCarPlate = carPlate ? (PlateHelper.format(carPlate) || carPlate) : '';
         const initialCars = [];
-        if (carPlate) {
+        if (formattedCarPlate) {
             initialCars.push({
-                plate: carPlate,
+                plate: formattedCarPlate,
                 model: carModel || 'Автомобиль',
                 category: carCategory,
                 addedAt: new Date().toISOString()
@@ -2384,8 +2641,11 @@ class CarWashApp {
 
         if (bookingNameEl) bookingNameEl.value = newClient.name;
         if (bookingPhoneEl) bookingPhoneEl.value = newClient.phone;
-        if (carPlate) {
-            if (bookingPlateEl) bookingPlateEl.value = carPlate;
+        if (formattedCarPlate) {
+            if (bookingPlateEl) {
+                bookingPlateEl.value = formattedCarPlate;
+                this.updatePlatePreview('bookingPlate');
+            }
             if (bookingModelEl) bookingModelEl.value = carModel || 'Автомобиль';
             if (bookingCatEl) bookingCatEl.value = carCategory;
         }
@@ -2798,6 +3058,57 @@ class CarWashApp {
         });
     }
 
+    initPlateFormatters() {
+        const plateInputIds = [
+            'garagePlate',
+            'bookingPlate',
+            'unifiedRegPlate',
+            'carPlate',
+            'guestSearchPlate'
+        ];
+
+        plateInputIds.forEach(id => {
+            const input = document.getElementById(id);
+            if (!input) return;
+
+            input.addEventListener('input', () => {
+                const raw = input.value;
+                const formatted = PlateHelper.formatInput(raw);
+                if (formatted !== raw) {
+                    input.value = formatted;
+                    try {
+                        input.setSelectionRange(input.value.length, input.value.length);
+                    } catch (_) {}
+                }
+                this.updatePlatePreview(id);
+            });
+
+            input.addEventListener('change', () => {
+                this.updatePlatePreview(id);
+            });
+
+            input.addEventListener('blur', () => {
+                this.updatePlatePreview(id);
+            });
+        });
+    }
+
+    updatePlatePreview(inputId) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const previewEl = document.getElementById(`${inputId}_preview`);
+        if (!previewEl) return;
+
+        const val = input.value.trim();
+        if (val.length >= 2) {
+            previewEl.innerHTML = PlateHelper.renderBadge(val);
+            previewEl.style.display = 'inline-flex';
+        } else {
+            previewEl.innerHTML = '';
+            previewEl.style.display = 'none';
+        }
+    }
+
     initDOM() {
         const options = { day: 'numeric', month: 'long', year: 'numeric' };
         const shiftDateEl = document.getElementById('shiftDate');
@@ -2813,6 +3124,7 @@ class CarWashApp {
         }
         this.renderAvailableTimeSlots();
         this.initPhoneMasks();
+        this.initPlateFormatters();
         this.updateThemeButton();
     }
 
@@ -3251,57 +3563,87 @@ class CarWashApp {
         const listEl = document.getElementById('clientGarageList');
         if (!emptyEl || !listEl) return;
 
-        if (!this.currentClient) {
+        const cars = this.getClientCars();
+
+        if (cars.length === 0) {
             emptyEl.style.display = 'block';
-            emptyEl.innerHTML = `
-                <div style="padding: 1.5rem 0; text-align:center;">
-                    <p>${this.t('clientBarHint', 'Для управления гаражом и сохранения машин войдите в аккаунт.')}</p>
-                    <div style="display:flex; justify-content:center; gap:0.5rem; margin-top:0.75rem; flex-wrap:wrap;">
-                        <button class="btn btn-primary" type="button" onclick="app.openAuthModal('login')">${this.t('authGateLoginBtn', '🔑 Войти в аккаунт')}</button>
-                        <button class="btn btn-outline" type="button" onclick="app.openAuthModal('register')">${this.t('authGateRegBtn', '✨ Быстрая регистрация')}</button>
+            if (this.currentClient) {
+                emptyEl.innerHTML = `
+                    <div style="padding: 1.5rem 0; text-align: center;">
+                        <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🚗</div>
+                        <p>${this.t('bookingEmpty', 'У вас пока нет сохраненных авто. Добавьте свою первую машину в форме справа!')}</p>
                     </div>
-                </div>
-            `;
+                `;
+            } else {
+                emptyEl.innerHTML = `
+                    <div style="padding: 1.5rem 0; text-align: center;">
+                        <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🚗</div>
+                        <p><strong>Гостевой гараж готов к работе!</strong></p>
+                        <p class="text-muted" style="margin-top: 0.35rem; font-size: 0.9rem;">
+                            Вы можете сохранять свои автомобили без входа в аккаунт.<br>
+                            Они будут сразу доступны для записи в 1 клик!
+                        </p>
+                        <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="btn btn-outline btn-sm" type="button" onclick="app.openAuthModal('login')">🔑 Войти</button>
+                            <button class="btn btn-primary btn-sm" type="button" onclick="app.openAuthModal('register')">✨ Создать аккаунт</button>
+                        </div>
+                    </div>
+                `;
+            }
             listEl.style.display = 'none';
             listEl.innerHTML = '';
             return;
         }
 
-        const cars = Array.isArray(this.currentClient.cars) ? this.currentClient.cars : [];
-        if (cars.length === 0) {
-            emptyEl.style.display = 'block';
-            emptyEl.innerHTML = this.t('bookingEmpty', 'У вас пока нет сохраненных авто. Добавьте свою первую машину в форме справа!');
-            listEl.style.display = 'none';
-            listEl.innerHTML = '';
-        } else {
-            emptyEl.style.display = 'none';
-            listEl.style.display = 'grid';
-            listEl.innerHTML = '';
+        emptyEl.style.display = 'none';
+        listEl.style.display = 'grid';
+        listEl.innerHTML = '';
 
-            const categoryNames = {
-                sedan: this.t('catSedan', '1 класс — Седан / Хэтчбек'),
-                crossover: this.t('catCrossover', '2 класс — Кроссовер / Универсал'),
-                suv: this.t('catSuv', '3 класс — Внедорожник / Джип'),
-                minivan: this.t('catMinivan', '4 класс — Микроавтобус / Коммерческий')
-            };
+        const categoryNames = {
+            sedan: this.t('catSedan', '1 класс — Седан / Хэтчбек'),
+            crossover: this.t('catCrossover', '2 класс — Кроссовер / Универсал'),
+            suv: this.t('catSuv', '3 класс — Внедорожник / Джип'),
+            minivan: this.t('catMinivan', '4 класс — Микроавтобус / Коммерческий')
+        };
 
-            cars.forEach((car, idx) => {
-                const card = document.createElement('div');
-                card.className = 'garage-card';
-                card.innerHTML = `
-                    <div style="flex:1;">
-                        <span class="garage-plate-badge">${Security.escapeHTML(car.plate)}</span>
-                        <div style="font-weight:700; margin:0.25rem 0;">${Security.escapeHTML(car.model)}</div>
-                        <div style="font-size:0.8rem; color:var(--text-muted);">${categoryNames[car.category] || car.category}</div>
-                        <div style="margin-top:0.75rem; display:flex; gap:0.5rem;">
-                            <button class="btn btn-outline btn-sm" type="button" onclick="app.quickBookCar(${idx})">📅 ${this.t('tabGuestBooking', 'Записаться')}</button>
-                            <button class="btn btn-outline btn-sm" type="button" onclick="app.removeClientCar('${Security.escapeHTML(car.plate)}')" style="color:#ef4444; border-color:#fecaca;" title="Удалить">🗑</button>
-                        </div>
-                    </div>
-                `;
-                listEl.appendChild(card);
-            });
+        if (!this.currentClient) {
+            const guestBanner = document.createElement('div');
+            guestBanner.style.gridColumn = '1 / -1';
+            guestBanner.style.background = 'rgba(2, 132, 199, 0.08)';
+            guestBanner.style.border = '1px solid rgba(2, 132, 199, 0.25)';
+            guestBanner.style.borderRadius = '8px';
+            guestBanner.style.padding = '0.6rem 0.85rem';
+            guestBanner.style.fontSize = '0.85rem';
+            guestBanner.style.display = 'flex';
+            guestBanner.style.justifyContent = 'space-between';
+            guestBanner.style.alignItems = 'center';
+            guestBanner.style.flexWrap = 'wrap';
+            guestBanner.style.gap = '0.5rem';
+            guestBanner.innerHTML = `
+                <span>💡 <strong>Гостевой гараж:</strong> ваши авто сохранены в браузере.</span>
+                <button class="btn btn-primary btn-xs" type="button" onclick="app.openAuthModal('register')">Привязать к постоянному аккаунту</button>
+            `;
+            listEl.appendChild(guestBanner);
         }
+
+        cars.forEach((car, idx) => {
+            const card = document.createElement('div');
+            card.className = 'garage-card';
+            card.innerHTML = `
+                <div style="flex:1;">
+                    <div style="margin-bottom:0.4rem;">
+                        ${this.renderPlateBadge(car.plate)}
+                    </div>
+                    <div style="font-weight:700; margin:0.35rem 0 0.15rem 0; font-size:1.05rem;">${Security.escapeHTML(car.model)}</div>
+                    <div style="font-size:0.8rem; color:var(--text-muted);">${categoryNames[car.category] || car.category}</div>
+                    <div style="margin-top:0.85rem; display:flex; gap:0.5rem; align-items:center;">
+                        <button class="btn btn-outline btn-sm" type="button" onclick="app.quickBookCar(${idx})" style="flex:1;">📅 ${this.t('tabGuestBooking', 'Записаться')}</button>
+                        <button class="btn btn-outline btn-sm" type="button" onclick="app.removeClientCar(${idx})" style="color:#ef4444; border-color:#fecaca;" title="Удалить из гаража">🗑</button>
+                    </div>
+                </div>
+            `;
+            listEl.appendChild(card);
+        });
     }
 
     quickBookCar(carIdx) {
@@ -3315,64 +3657,74 @@ class CarWashApp {
 
     addClientCar(event) {
         event.preventDefault();
-        if (!this.currentClient) {
-            alert(this.t('authRequiredToAddCar', 'Чтобы добавить автомобиль в гараж, пожалуйста, войдите в личный кабинет.'));
-            this.openAuthModal('login');
-            return;
-        }
-
         const plateInput = document.getElementById('garagePlate');
         const modelInput = document.getElementById('garageModel');
         const catSelect = document.getElementById('garageCategory');
 
-        const plate = plateInput.value.trim().toUpperCase();
-        const model = modelInput.value.trim();
-        const category = catSelect.value;
+        const rawPlate = (plateInput ? plateInput.value : '').trim().toUpperCase();
+        const model = (modelInput ? modelInput.value : '').trim();
+        const category = (catSelect ? catSelect.value : 'sedan');
 
-        if (!plate || !model) {
-            alert('Пожалуйста, укажите госномер и модель авто.');
+        if (!rawPlate || !model) {
+            alert('Пожалуйста, укажите госномер и модель автомобиля.');
             return;
         }
 
-        if (!Array.isArray(this.currentClient.cars)) {
-            this.currentClient.cars = [];
-        }
+        const formattedPlate = PlateHelper.format(rawPlate) || rawPlate;
+        const cleanTarget = formattedPlate.replace(/[\s\-_]+/g, '').toUpperCase();
 
-        const cleanPlate = plate.replace(/\s+/g, '');
-        const exists = this.currentClient.cars.find(c => c.plate.replace(/\s+/g, '') === cleanPlate);
+        const cars = [...this.getClientCars()];
+        const exists = cars.find(c => (c.plate || '').replace(/[\s\-_]+/g, '').toUpperCase() === cleanTarget);
         if (exists) {
-            alert(`Автомобиль ${plate} уже есть в вашем гараже!`);
+            alert(`Автомобиль ${formattedPlate} уже есть в вашем гараже!`);
             return;
         }
 
-        const newCar = { plate, model, category };
-        this.currentClient.cars.push(newCar);
+        const newCar = {
+            plate: formattedPlate,
+            model: model,
+            category: category,
+            addedAt: new Date().toISOString()
+        };
+        cars.push(newCar);
 
-        const dbClient = this.db.clients.find(c => c.id === this.currentClient.id);
-        if (dbClient) {
-            dbClient.cars = this.currentClient.cars;
+        this.saveClientCars(cars);
+
+        if (event.target && typeof event.target.reset === 'function') {
+            event.target.reset();
         }
+        const previewEl = document.getElementById('garagePlate_preview');
+        if (previewEl) previewEl.style.display = 'none';
 
-        this.saveDatabase();
-        this.saveClientSession(this.currentClient);
-        event.target.reset();
-        this.renderAll();
-        alert(`🚗 Автомобиль ${plate} (${model}) успешно добавлен в ваш гараж!`);
+        this.populateBookingCarDropdown();
+        this.renderClientGarage();
+        this.renderClientBar();
+        alert(`🚗 Автомобиль ${formattedPlate} (${model}) успешно добавлен в ваш гараж!`);
     }
 
-    removeClientCar(plate) {
-        if (!this.currentClient || !Array.isArray(this.currentClient.cars)) return;
-        if (!confirm(`Удалить автомобиль ${plate} из гаража?`)) return;
+    removeClientCar(target) {
+        const cars = [...this.getClientCars()];
+        if (cars.length === 0) return;
 
-        this.currentClient.cars = this.currentClient.cars.filter(c => c.plate !== plate);
-        const dbClient = this.db.clients.find(c => c.id === this.currentClient.id);
-        if (dbClient) {
-            dbClient.cars = this.currentClient.cars;
+        let targetCar = null;
+        let newCars = [];
+
+        if (typeof target === 'number') {
+            targetCar = cars[target];
+            if (!targetCar) return;
+            if (!confirm(`Удалить автомобиль ${targetCar.plate} (${targetCar.model}) из гаража?`)) return;
+            newCars = cars.filter((_, idx) => idx !== target);
+        } else {
+            const cleanTarget = String(target).replace(/[\s\-_]+/g, '').toUpperCase();
+            targetCar = cars.find(c => (c.plate || '').replace(/[\s\-_]+/g, '').toUpperCase() === cleanTarget);
+            if (!confirm(`Удалить автомобиль ${targetCar ? targetCar.plate : target} из гаража?`)) return;
+            newCars = cars.filter(c => (c.plate || '').replace(/[\s\-_]+/g, '').toUpperCase() !== cleanTarget);
         }
 
-        this.saveDatabase();
-        this.saveClientSession(this.currentClient);
-        this.renderAll();
+        this.saveClientCars(newCars);
+        this.populateBookingCarDropdown();
+        this.renderClientGarage();
+        this.renderClientBar();
     }
 
     populateBookingCarDropdown() {
@@ -3382,8 +3734,10 @@ class CarWashApp {
         const currentVal = select.value;
         select.innerHTML = '';
 
-        if (this.currentClient && Array.isArray(this.currentClient.cars) && this.currentClient.cars.length > 0) {
-            this.currentClient.cars.forEach((car, idx) => {
+        const cars = this.getClientCars();
+
+        if (cars.length > 0) {
+            cars.forEach((car, idx) => {
                 const opt = document.createElement('option');
                 opt.value = `car_${idx}`;
                 opt.textContent = `🚗 ${car.plate} — ${car.model}`;
@@ -3398,7 +3752,7 @@ class CarWashApp {
 
         if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
             select.value = currentVal;
-        } else if (this.currentClient && Array.isArray(this.currentClient.cars) && this.currentClient.cars.length > 0) {
+        } else if (cars.length > 0) {
             select.value = 'car_0';
         } else {
             select.value = 'new';
@@ -3415,17 +3769,24 @@ class CarWashApp {
         const plateInput = document.getElementById('bookingPlate');
         const modelInput = document.getElementById('bookingModel');
         const catSelect = document.getElementById('bookingCategory');
+        const cars = this.getClientCars();
 
-        if (val.startsWith('car_') && this.currentClient && Array.isArray(this.currentClient.cars)) {
+        if (val.startsWith('car_')) {
             const idx = parseInt(val.replace('car_', ''), 10);
-            const car = this.currentClient.cars[idx];
+            const car = cars[idx];
             if (car) {
-                if (plateInput) plateInput.value = car.plate;
+                if (plateInput) {
+                    plateInput.value = car.plate;
+                    this.updatePlatePreview('bookingPlate');
+                }
                 if (modelInput) modelInput.value = car.model;
                 if (catSelect) catSelect.value = car.category || 'sedan';
             }
         } else {
-            if (plateInput && !plateInput.matches(':focus')) plateInput.value = '';
+            if (plateInput && !plateInput.matches(':focus')) {
+                plateInput.value = '';
+                this.updatePlatePreview('bookingPlate');
+            }
             if (modelInput && !modelInput.matches(':focus')) modelInput.value = '';
             if (catSelect) catSelect.value = 'sedan';
         }
@@ -3598,24 +3959,19 @@ class CarWashApp {
 
         this.db.bookings.unshift(newBooking);
 
-        // Автоматически сохраняем автомобиль в гараж клиента, если его там ещё нет
-        if (this.currentClient) {
-            if (!Array.isArray(this.currentClient.cars)) this.currentClient.cars = [];
-            const cleanPlate = carPlate.replace(/\s+/g, '').toUpperCase();
-            const carExists = this.currentClient.cars.some(c => (c.plate || '').replace(/\s+/g, '').toUpperCase() === cleanPlate);
-            if (!carExists) {
-                this.currentClient.cars.push({
-                    plate: carPlate,
-                    model: carModel || 'Автомобиль',
-                    category: category || 'sedan',
-                    addedAt: new Date().toISOString()
-                });
-                const dbClient = (this.db.clients || []).find(c => c.id === this.currentClient.id);
-                if (dbClient) {
-                    dbClient.cars = this.currentClient.cars;
-                }
-                this.saveClientSession(this.currentClient);
-            }
+        // Автоматически сохраняем автомобиль в гараж (клиента или гостя), если его там ещё нет
+        const formattedCarPlate = PlateHelper.format(carPlate) || carPlate;
+        const cleanPlate = formattedCarPlate.replace(/[\s\-_]+/g, '').toUpperCase();
+        const currentCars = [...this.getClientCars()];
+        const carExists = currentCars.some(c => (c.plate || '').replace(/[\s\-_]+/g, '').toUpperCase() === cleanPlate);
+        if (!carExists) {
+            currentCars.push({
+                plate: formattedCarPlate,
+                model: carModel || 'Автомобиль',
+                category: category || 'sedan',
+                addedAt: new Date().toISOString()
+            });
+            this.saveClientCars(currentCars);
         }
 
         this.saveDatabase();
@@ -3690,7 +4046,7 @@ class CarWashApp {
             card.innerHTML = `
                 <div class="booking-card-header">
                     <div>
-                        <span class="garage-plate-badge">${Security.escapeHTML(b.carPlate)}</span>
+                        <div style="margin-bottom:0.35rem;">${this.renderPlateBadge(b.carPlate)}</div>
                         <div style="font-weight:600; margin-top:0.2rem;">${Security.escapeHTML(b.carModel || 'Автомобиль')}</div>
                     </div>
                     <span class="${statusInfo.class}">${statusInfo.label}</span>
@@ -3842,7 +4198,7 @@ class CarWashApp {
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div>
-                        <span class="garage-plate-badge">${Security.escapeHTML(b.carPlate)}</span>
+                        <div style="margin-bottom:0.35rem;">${this.renderPlateBadge(b.carPlate)}</div>
                         <h3 style="margin:0.25rem 0;">${Security.escapeHTML(b.carModel || 'Автомобиль')}</h3>
                         <div class="text-muted" style="font-size:0.9rem;">Клиент: <strong>${Security.escapeHTML(b.clientName)}</strong> (📞 <a href="tel:${Security.escapeHTML(b.clientPhone)}" style="color:var(--primary); font-weight:600;">${Security.escapeHTML(b.clientPhone)}</a>)</div>
                     </div>
@@ -3951,7 +4307,7 @@ class CarWashApp {
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <div>
-                        <span class="garage-plate-badge">${Security.escapeHTML(b.carPlate)}</span>
+                        <div style="margin-bottom:0.35rem;">${this.renderPlateBadge(b.carPlate)}</div>
                         <h3 style="margin:0.25rem 0;">${Security.escapeHTML(b.carModel || 'Автомобиль')}</h3>
                         <div class="text-muted" style="font-size:0.9rem;">
                             Клиент: <strong>${Security.escapeHTML(b.clientName)}</strong> • 
@@ -4221,7 +4577,7 @@ class CarWashApp {
         const isPaid = this.isOrderPaid(order);
         if (order.status === 'in-progress') {
             resultContainer.innerHTML = `
-                <div class="guest-plate-badge">${Security.escapeHTML(order.carPlate)}</div>
+                <div style="margin-bottom:0.75rem;">${this.renderPlateBadge(order.carPlate)}</div>
                 <div><strong>${Security.escapeHTML(order.carModel || 'Автомобиль')}</strong></div>
                 <div class="guest-status-banner in-progress">
                     <span>${this.t('searchCarWashing', '🚿 Автомобиль моется в {box}', { box: `<strong>${boxName}</strong>` })}</span>
@@ -4238,7 +4594,7 @@ class CarWashApp {
             `;
         } else if (order.status === 'ready') {
             resultContainer.innerHTML = `
-                <div class="guest-plate-badge">${Security.escapeHTML(order.carPlate)}</div>
+                <div style="margin-bottom:0.75rem;">${this.renderPlateBadge(order.carPlate)}</div>
                 <div><strong>${Security.escapeHTML(order.carModel || 'Автомобиль')}</strong></div>
                 <div class="guest-status-banner ready">
                     <span>${this.t('searchCarReady', '✅ Автомобиль вымыт и готов к выдаче! ({box})', { box: boxName })}</span>
@@ -4255,7 +4611,7 @@ class CarWashApp {
             `;
         } else if (order.status === 'paid') {
             resultContainer.innerHTML = `
-                <div class="guest-plate-badge">${Security.escapeHTML(order.carPlate)}</div>
+                <div style="margin-bottom:0.75rem;">${this.renderPlateBadge(order.carPlate)}</div>
                 <div style="color: #10b981; font-weight: 600; padding: 0.5rem 0;">
                     ${this.t('searchWashCompleted', '✅ Мойка завершена и оплачена. Спасибо, что выбрали нас!')}
                 </div>
@@ -4411,7 +4767,7 @@ class CarWashApp {
                                 ${isPaid ? `<span class="badge" style="background:#059669; color:#fff; font-size:0.75rem;">🟢 Оплачено</span>` : ''}
                             </div>
                         </div>
-                        <h3 style="font-size:1.3rem; margin:0.3rem 0;">${Security.escapeHTML(order.carPlate)}</h3>
+                        <div style="margin:0.4rem 0;">${this.renderPlateBadge(order.carPlate)}</div>
                         <div class="text-muted">${Security.escapeHTML(order.carModel || 'Автомобиль')}</div>
                         <div style="margin: 0.75rem 0; font-size: 0.9rem;">
                             <strong>Услуги:</strong> ${serviceNames}
@@ -4461,7 +4817,7 @@ class CarWashApp {
                                 <span class="badge" style="background:#0f172a; color:#fff; font-size:0.9rem;">${box ? Security.escapeHTML(box.name) : 'Бокс'}</span>
                                 <span class="status-pill waiting">⏳ В очереди</span>
                             </div>
-                            <h3 style="font-size:1.3rem; margin:0.3rem 0;">${Security.escapeHTML(qb.carPlate)}</h3>
+                            <div style="margin:0.4rem 0;">${this.renderPlateBadge(qb.carPlate)}</div>
                             <div class="text-muted">${Security.escapeHTML(qb.carModel || 'Автомобиль')} • 🕒 ${Security.escapeHTML(qb.time)}</div>
                             <div style="font-size:0.85rem; color:#b45309; background:#fef3c7; padding:0.4rem 0.6rem; border-radius:6px; margin-top:0.75rem;">
                                 Ожидаемая выплата: <strong>${estSalary.toLocaleString()} ₸</strong>
@@ -4570,7 +4926,7 @@ class CarWashApp {
             if (isBusy) {
                 const isPaid = this.isOrderPaid(activeOrder);
                 cardContent += `
-                    <div class="box-car-info">${Security.escapeHTML(activeOrder.carPlate)}</div>
+                    <div class="box-car-info" style="margin: 0.35rem 0;">${this.renderPlateBadge(activeOrder.carPlate)}</div>
                     <div class="box-details">${Security.escapeHTML(activeOrder.carModel || 'Авто')} • ${Security.escapeHTML(this.getWorkerName(activeOrder.workerId))}</div>
                     <div style="margin-top: 0.5rem; display:flex; gap:0.35rem; align-items:center; flex-wrap:wrap;">
                         <span class="status-pill ${activeOrder.status}">
@@ -4611,7 +4967,7 @@ class CarWashApp {
                             </div>
                             <div class="box-queue-item">
                                 <div class="box-queue-item-main">
-                                    <span class="box-queue-plate">${Security.escapeHTML(nextBooking.carPlate)}</span>
+                                    <span class="box-queue-plate">${this.renderPlateBadge(nextBooking.carPlate)}</span>
                                     <span class="box-queue-model">${Security.escapeHTML(nextBooking.carModel || 'Авто')}</span>
                                 </div>
                                 <div class="box-queue-meta">
@@ -4648,7 +5004,7 @@ class CarWashApp {
                             </div>
                             <div class="box-queue-item" style="border-color: #86efac;">
                                 <div class="box-queue-item-main">
-                                    <span class="box-queue-plate">${Security.escapeHTML(nextBooking.carPlate)}</span>
+                                    <span class="box-queue-plate">${this.renderPlateBadge(nextBooking.carPlate)}</span>
                                     <span class="box-queue-model">${Security.escapeHTML(nextBooking.carModel || 'Авто')}</span>
                                 </div>
                                 <div class="box-queue-meta">
@@ -4854,7 +5210,7 @@ class CarWashApp {
             tr.innerHTML = `
                 <td><strong>${index + 1}</strong></td>
                 <td>
-                    <strong>${Security.escapeHTML(order.carPlate)}</strong>
+                    <div style="margin-bottom:0.25rem;">${this.renderPlateBadge(order.carPlate)}</div>
                     <div class="text-muted" style="font-size:0.8rem;">${Security.escapeHTML(order.carModel || 'Не указана')}</div>
                 </td>
                 <td>${box ? Security.escapeHTML(box.name) : '—'}</td>
@@ -4916,7 +5272,7 @@ class CarWashApp {
             tr.innerHTML = `
                 <td><span class="badge-queued">Очередь</span></td>
                 <td>
-                    <strong>${Security.escapeHTML(b.carPlate)}</strong>
+                    <div style="margin-bottom:0.25rem;">${this.renderPlateBadge(b.carPlate)}</div>
                     <div class="text-muted" style="font-size:0.8rem;">${Security.escapeHTML(b.carModel || 'Авто')} (🕒 ${Security.escapeHTML(b.time || '—')})</div>
                 </td>
                 <td><strong>${box ? Security.escapeHTML(box.name) : '—'}</strong></td>
@@ -5112,7 +5468,7 @@ class CarWashApp {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${dateStr}</td>
-                <td><strong>${Security.escapeHTML(order.carPlate)}</strong></td>
+                <td>${this.renderPlateBadge(order.carPlate)}</td>
                 <td>${Security.escapeHTML(order.carModel || '—')}</td>
                 <td style="font-size:0.85rem;">${order.services.length} услуг(и)</td>
                 <td>${Security.escapeHTML(workerName)}</td>
