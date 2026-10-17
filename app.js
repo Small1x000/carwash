@@ -1108,18 +1108,26 @@ class CarWashApp {
     mergeBookings(cloudBookings) {
         if (!Array.isArray(cloudBookings)) return;
         const map = new Map();
-        // 1. Локальные брони
-        (this.db.bookings || []).forEach(b => {
-            if (b && b.id) map.set(b.id, b);
-        });
-        // 2. Облачные брони
+        // 1. Сначала загружаем облачные заявки
         cloudBookings.forEach(b => {
+            if (b && b.id) map.set(String(b.id), b);
+        });
+        // 2. Локальные заявки объединяем поверх облачных:
+        (this.db.bookings || []).forEach(b => {
             if (b && b.id) {
-                if (!map.has(b.id)) {
-                    map.set(b.id, b);
+                const key = String(b.id);
+                if (map.has(key)) {
+                    const cloud = map.get(key);
+                    // Локальное состояние пользователя ВСЕГДА приоритетнее, если статус был отменен или изменен локально
+                    const localTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+                    const cloudTime = new Date(cloud.updatedAt || cloud.createdAt || 0).getTime();
+                    if (localTime >= cloudTime || b.status === 'cancelled') {
+                        map.set(key, { ...cloud, ...b });
+                    } else {
+                        map.set(key, { ...b, ...cloud });
+                    }
                 } else {
-                    const local = map.get(b.id);
-                    map.set(b.id, { ...local, ...b });
+                    map.set(key, b);
                 }
             }
         });
@@ -2328,11 +2336,6 @@ class CarWashApp {
             return;
         }
 
-        // Проверяем подтверждение номера
-        if (!this.smsVerification || !this.smsVerification.verified || this.smsVerification.phone !== last10) {
-            alert('⚠️ Пожалуйста, подтвердите номер телефона проверочным кодом!\nНажмите кнопку «Получить код» и введите 4-значный код.');
-            return;
-        }
 
         if (!Array.isArray(this.db.clients)) this.db.clients = [];
         const exists = this.db.clients.find(c => String(c.phone || '').replace(/\D/g, '').slice(-10) === last10);
@@ -4020,16 +4023,47 @@ class CarWashApp {
         alert(`⏱ Заявка авто ${booking.carPlate} переведена в Лист ожидания!\n\nВы можете в любой момент открыть её во вкладке «Лист ожидания» в верхнем меню.`);
     }
 
-    cancelAdminBooking(bookingId) {
-        if (!this.verifyAuth('admin')) return;
-        const booking = (this.db.bookings || []).find(b => b.id === bookingId);
-        if (!booking) return;
+    async cancelAdminBooking(bookingId) {
+        const isAuthorized = ['admin', 'owner'].includes(this.sessionRole) || ['admin', 'owner'].includes(this.currentRole);
+        if (!isAuthorized) {
+            alert('Отклонять авто из очереди может только Администратор или Владелец.\nПожалуйста, войдите в систему.');
+            this.openAuthModal('login');
+            return;
+        }
 
-        if (!confirm(`Отклонить бронь авто ${booking.carPlate}?`)) return;
+        const booking = (this.db.bookings || []).find(b => String(b.id) === String(bookingId));
+        if (!booking) {
+            alert('Заявка не найдена в списке активных броней.');
+            return;
+        }
+
+        const carInfo = booking.carPlate ? `авто ${booking.carPlate}` : 'эту бронь';
+        if (!confirm(`Отклонить ${carInfo} и убрать из очереди?`)) {
+            return;
+        }
 
         booking.status = 'cancelled';
+        booking.cancelledAt = new Date().toISOString();
+        booking.updatedAt = Date.now();
+
         this.saveDatabase();
         this.renderAll();
+
+        // Немедленно синхронизируем отмену с облаком Firebase Realtime Database
+        if (this.db.cloud && this.db.cloud.firebaseUrl) {
+            try {
+                const baseUrl = this.db.cloud.firebaseUrl.replace(/\/$/, '');
+                await fetch(baseUrl + '/carwash_sync.json', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bookings: this.db.bookings, updatedAt: Date.now() })
+                });
+            } catch (e) {
+                console.warn('[Cloud Sync Error]', e);
+            }
+        }
+
+        alert(`❌ Бронь авто ${booking.carPlate || ''} успешно отклонена и убрана из очереди!`);
     }
 
     startBookingInBay(bookingId) {
@@ -4532,9 +4566,12 @@ class CarWashApp {
                                     <span>🕒 ${Security.escapeHTML(nextBooking.time || '—')}</span>
                                     <span>🧽 ${Security.escapeHTML(nextWorkerName)}</span>
                                 </div>
-                                <div class="box-queue-actions">
-                                    <button class="btn btn-primary btn-xs" type="button" onclick="app.startBookingInBay('${nextBooking.id}')">
+                                <div class="box-queue-actions" style="display:flex; gap:0.35rem; margin-top:0.35rem;">
+                                    <button class="btn btn-primary btn-xs" type="button" onclick="app.startBookingInBay('${nextBooking.id}')" style="flex:1;">
                                         ${this.t('boxLaunchBay', '🚿 Запустить в бокс')}
+                                    </button>
+                                    <button class="btn btn-outline btn-xs" type="button" onclick="app.cancelAdminBooking('${nextBooking.id}')" style="color:#ef4444; border-color:#fecaca;" title="Отклонить авто из очереди">
+                                        ❌ Отклонить
                                     </button>
                                 </div>
                             </div>
@@ -4566,9 +4603,12 @@ class CarWashApp {
                                     <span>🕒 ${Security.escapeHTML(nextBooking.time || '—')}</span>
                                     <span>🧽 ${Security.escapeHTML(nextWorkerName)}</span>
                                 </div>
-                                <div class="box-queue-actions">
-                                    <button class="btn btn-success btn-xs" type="button" onclick="app.startBookingInBay('${nextBooking.id}')">
+                                <div class="box-queue-actions" style="display:flex; gap:0.35rem; margin-top:0.35rem;">
+                                    <button class="btn btn-success btn-xs" type="button" onclick="app.startBookingInBay('${nextBooking.id}')" style="flex:1;">
                                         ${this.t('boxLaunchNow', '🚿 Запустить сейчас')}
+                                    </button>
+                                    <button class="btn btn-outline btn-xs" type="button" onclick="app.cancelAdminBooking('${nextBooking.id}')" style="color:#ef4444; border-color:#fecaca;" title="Отклонить авто из очереди">
+                                        ❌ Отклонить
                                     </button>
                                 </div>
                             </div>
@@ -4838,9 +4878,14 @@ class CarWashApp {
                     <span class="text-muted" style="font-size:0.8rem;">При заезде</span>
                 </td>
                 <td>
-                    <button class="btn btn-primary btn-sm" type="button" onclick="app.startBookingInBay('${b.id}')">
-                        🚿 Запустить в бокс
-                    </button>
+                    <div style="display:flex; gap:0.4rem; align-items:center;">
+                        <button class="btn btn-primary btn-sm" type="button" onclick="app.startBookingInBay('${b.id}')">
+                            🚿 Запустить в бокс
+                        </button>
+                        <button class="btn btn-outline btn-sm" type="button" onclick="app.cancelAdminBooking('${b.id}')" style="color:#ef4444; border-color:#fecaca;" title="Отклонить авто из очереди">
+                            ❌ Отклонить
+                        </button>
+                    </div>
                 </td>
             `;
             tbody.appendChild(tr);

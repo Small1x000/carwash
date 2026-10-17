@@ -6,7 +6,7 @@
     <meta name="description" content="CarWash Tracker — профессиональная система управления автомойкой: 10 боксов, онлайн-бронирование, личный кабинет клиента, расчет заказов.">
     <title>CarWash Tracker | Управление автомойкой</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
-    <link rel="stylesheet" href="style.css?v=3.0">
+    <link rel="stylesheet" href="style.css?v=3.2">
     <script>
         (function() {
             var t = localStorage.getItem('carwash_theme');
@@ -1057,23 +1057,7 @@
 
                     <div class="form-group" style="margin-top: 0.75rem;">
                         <label for="unifiedRegPhone" data-i18n="authPhone">Номер телефона *</label>
-                        <div style="display:flex; gap:0.5rem; margin-top:0.25rem;">
-                            <input type="tel" id="unifiedRegPhone" placeholder="+7 (701) 000-00-00" data-i18n-placeholder="phonePlaceholder" required maxlength="25" style="flex:1;" autocomplete="tel">
-                            <button class="btn btn-outline" type="button" id="btnSendSmsCode" onclick="app.sendVerificationCode()" style="white-space:nowrap; font-size:0.82rem; padding:0.4rem 0.65rem;" data-i18n="authGetCode">
-                                📲 Получить код
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Блок ввода проверочного кода -->
-                    <div id="smsCodeContainer" style="display:none; background:var(--bg-page); padding:0.85rem; border-radius:var(--radius); border:1px solid var(--border); margin-top:0.75rem;">
-                        <label for="unifiedRegCode" style="font-size:0.85rem; font-weight:600; display:block; margin-bottom:0.35rem;" data-i18n="authCodeLabel">Код из SMS-сообщения (4-6 цифр):</label>
-                        <div style="display:flex; gap:0.5rem;">
-                            <input type="text" id="unifiedRegCode" placeholder="123456" maxlength="6" inputmode="numeric" style="flex:1; font-size:1.15rem; letter-spacing:3px; font-weight:700; text-align:center;">
-                            <button class="btn btn-success" type="button" id="btnVerifyCode" onclick="app.confirmVerificationCode()" style="white-space:nowrap;" data-i18n="authVerifyCode">Проверить</button>
-                        </div>
-                        <div id="codeVerificationStatus" style="margin-top:0.5rem;"></div>
-                        <div id="codeHelpLinks" style="margin-top:0.5rem; font-size:0.82rem;"></div>
+                        <input type="tel" id="unifiedRegPhone" placeholder="+7 (701) 000-00-00" data-i18n-placeholder="phonePlaceholder" required maxlength="25" autocomplete="tel">
                     </div>
 
                     <div class="form-group" style="margin-top: 0.75rem;">
@@ -1215,6 +1199,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
     <!-- Основной скрипт -->
-    <script src="app.js?v=3.0"></script>
+    <script src="app.js?v=3.2"></script>
 </body>
 </html>
