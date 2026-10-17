@@ -6,6 +6,7 @@
     --success-hover: #059669;
     --warning: #f59e0b;
     --danger: #ef4444;
+    --purple: #8b5cf6;
     --bg-page: #f8fafc;
     --bg-card: #ffffff;
     --text-main: #0f172a;
@@ -22,16 +23,26 @@
 }
 
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    background-color: var(--bg-page);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f1f5f9;
+    background-image: 
+        radial-gradient(circle at 12% 15%, rgba(37, 99, 235, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 88% 22%, rgba(14, 165, 233, 0.07) 0%, transparent 40%),
+        radial-gradient(circle at 50% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 45%),
+        radial-gradient(rgba(148, 163, 184, 0.18) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 28px 28px;
+    background-attachment: fixed;
     color: var(--text-main);
     line-height: 1.5;
-    padding-bottom: 2rem;
+    padding-bottom: 3rem;
+    min-height: 100vh;
 }
 
 /* Header */
 .app-header {
-    background: var(--bg-card);
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--border);
     padding: 1rem 1.5rem;
     display: flex;
@@ -40,7 +51,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 50;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+    box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.05);
 }
 
 .logo-area {
@@ -53,21 +64,38 @@ body {
     font-size: 2rem;
 }
 
-.logo-area h1 {
+.logo-title {
     font-size: 1.25rem;
     font-weight: 700;
     line-height: 1.2;
 }
 
+.badges-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+    flex-wrap: wrap;
+}
+
 .badge {
     display: inline-block;
-    padding: 0.2rem 0.5rem;
+    padding: 0.2rem 0.6rem;
     font-size: 0.75rem;
     font-weight: 600;
     border-radius: 9999px;
     background: var(--primary-light);
     color: var(--primary);
-    margin-top: 0.2rem;
+}
+
+.badge-cloud {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.badge-cloud.connected {
+    background: #dcfce7;
+    color: #15803d;
 }
 
 .header-actions {
@@ -114,9 +142,36 @@ body {
     color: #ffffff;
 }
 
+/* Visibility Rules Based on Active Role */
+body.role-guest .role-tab-worker,
+body.role-guest .role-tab-admin,
+body.role-guest .role-tab-owner {
+    display: none !important;
+}
+
+body.role-worker .role-tab-guest,
+body.role-worker .role-tab-admin,
+body.role-worker .role-tab-owner,
+body.role-worker .client-account-bar {
+    display: none !important;
+}
+
+body.role-admin .role-tab-guest,
+body.role-admin .role-tab-worker,
+body.role-admin .role-tab-owner,
+body.role-admin .client-account-bar {
+    display: none !important;
+}
+
+body.role-owner .role-tab-guest,
+body.role-owner .role-tab-worker,
+body.role-owner .client-account-bar {
+    display: none !important;
+}
+
 /* Main Content */
 .main-content {
-    max-width: 1200px;
+    max-width: 1240px;
     margin: 1.5rem auto;
     padding: 0 1rem;
 }
@@ -129,23 +184,97 @@ body {
     display: block;
 }
 
-/* Grid of Bays / Boxes */
+/* Cards */
+.card, .table-card {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.highlight-card {
+    border-left: 4px solid var(--primary);
+    background: #f8faff;
+}
+
+.cloud-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.section-header h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+/* ==================== ПЛАШКА КЛИЕНТА (АККАУНТ) ==================== */
+.client-account-bar {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #eff6ff, #f8fafc);
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+body.role-guest .client-account-bar {
+    display: flex;
+}
+
+.client-info-block {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.client-icon {
+    font-size: 1.75rem;
+}
+
+/* ==================== 10 БОКСОВ (КОМПАКТНАЯ СЕТКА) ==================== */
 .boxes-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 1rem;
     margin-bottom: 2rem;
+}
+
+.ten-boxes-grid {
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
 }
 
 .box-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 1.25rem;
+    padding: 1rem;
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.box-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px -2px rgb(0 0 0 / 0.08);
 }
 
 .box-card.free {
@@ -160,16 +289,16 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
 }
 
 .box-header h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1.05rem;
+    font-weight: 700;
 }
 
 .box-status {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
     font-weight: 600;
@@ -186,61 +315,252 @@ body {
 }
 
 .box-car-info {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     font-weight: 700;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
 }
 
 .box-details {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
 }
 
-/* Section Header */
-.section-header {
+/* ==================== ОЧЕРЕДЬ И СЛЕДУЮЩАЯ МАШИНА ПОД БОКСОМ ==================== */
+.box-queue-section {
+    margin-top: 0.75rem;
+    padding-top: 0.65rem;
+    border-top: 1px dashed var(--border);
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.section-header h2 {
-    font-size: 1.25rem;
-    font-weight: 700;
-}
-
-/* Tables and Cards */
-.card, .table-card {
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.table-responsive {
-    overflow-x: auto;
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
+    flex-direction: column;
+    gap: 0.45rem;
     text-align: left;
 }
 
-.data-table th, .data-table td {
-    padding: 0.85rem 1rem;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.9rem;
-}
-
-.data-table th {
-    background-color: #f8fafc;
+.box-queue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: 700;
     color: var(--text-muted);
-    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
 }
 
+.badge-queued {
+    background: #fef3c7;
+    color: #b45309;
+    padding: 0.15rem 0.45rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.box-queue-item {
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.box-queue-item.box-queue-item-secondary {
+    opacity: 0.85;
+}
+
+.box-queue-item-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+}
+
+.box-queue-plate {
+    font-weight: 800;
+    font-size: 0.85rem;
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.box-queue-model {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-main);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.box-queue-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.box-queue-actions {
+    display: flex;
+    gap: 0.35rem;
+    margin-top: 0.2rem;
+}
+
+.box-queue-actions .btn {
+    flex: 1;
+}
+
+/* ==================== ГАРАЖ КЛИЕНТА ==================== */
+.garage-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.garage-card {
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.garage-plate-badge {
+    display: inline-block;
+    background: #0f172a;
+    color: #f8fafc;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    margin-bottom: 0.25rem;
+}
+
+/* ==================== БРОНИРОВАНИЯ (КЛИЕНТ И АДМИН) ==================== */
+.bookings-stream {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.booking-card {
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    border-left: 4px solid var(--primary);
+}
+
+.booking-card.pending {
+    border-left-color: var(--warning);
+}
+
+.booking-card.waiting {
+    border-left-color: var(--purple);
+}
+
+.booking-card.confirmed {
+    border-left-color: var(--success);
+}
+
+.booking-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.admin-bookings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.25rem;
+}
+
+.admin-booking-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-top: 4px solid var(--warning);
+}
+
+.admin-booking-card.waiting {
+    border-top-color: var(--purple);
+}
+
+.admin-booking-card.confirmed {
+    border-top-color: var(--success);
+}
+
+.admin-booking-card.completed {
+    border-top-color: #94a3b8;
+    opacity: 0.85;
+}
+
+.booking-actions-box {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* ==================== ФИЛЬТРЫ ЗАЯВОК И ЛИСТ ОЖИДАНИЯ ==================== */
+.filter-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+}
+
+.pill-filter-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 0.35rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pill-filter-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.pill-filter-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.waitlist-header-badge {
+    background: #f3e8ff;
+    color: #6b21a8;
+    padding: 0.4rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border: 1px solid #e9d5ff;
+}
+
+/* ==================== СТАТУС-ПИЛЛЫ ==================== */
 .status-pill {
     display: inline-block;
     padding: 0.25rem 0.6rem;
@@ -249,9 +569,19 @@ body {
     font-weight: 600;
 }
 
-.status-pill.queue {
+.status-pill.pending {
     background: #fef3c7;
     color: #b45309;
+}
+
+.status-pill.waiting {
+    background: #f3e8ff;
+    color: #6b21a8;
+}
+
+.status-pill.confirmed {
+    background: #dcfce7;
+    color: #15803d;
 }
 
 .status-pill.in-progress {
@@ -269,7 +599,203 @@ body {
     color: #475569;
 }
 
-/* Buttons */
+/* ==================== КЛИЕНТСКИЙ МОДАЛ ТАБЫ ==================== */
+.client-modal-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 1.25rem;
+}
+
+.client-modal-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 0.75rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+.client-modal-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+/* ==================== СТИЛИ ГОСТЯ (КЛИЕНТА) ==================== */
+.guest-search-card {
+    text-align: center;
+    max-width: 650px;
+    margin: 1.5rem auto 2rem;
+}
+
+.guest-search-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+}
+
+.guest-search-form input {
+    flex: 1;
+    font-size: 1.1rem;
+    text-align: center;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.guest-result-box {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    border: 2px dashed var(--border);
+    background: var(--bg-page);
+    text-align: left;
+}
+
+.guest-plate-badge {
+    display: inline-block;
+    background: #0f172a;
+    color: #f8fafc;
+    font-weight: 700;
+    font-size: 1.3rem;
+    padding: 0.4rem 1.2rem;
+    border-radius: 6px;
+    letter-spacing: 2px;
+    border: 2px solid #e2e8f0;
+    margin-bottom: 0.75rem;
+}
+
+.guest-status-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius);
+    margin: 0.75rem 0;
+    font-weight: 600;
+}
+
+.guest-status-banner.in-progress {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.guest-status-banner.ready {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.contacts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.contact-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.contact-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+}
+
+/* ==================== СТИЛИ МОЙЩИКА ==================== */
+.worker-welcome-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    color: white;
+}
+
+.worker-welcome-bar h2 {
+    color: white;
+    margin-top: 0.2rem;
+}
+
+.worker-quick-stats {
+    display: flex;
+    gap: 1rem;
+}
+
+.stat-mini {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.6rem 1rem;
+    border-radius: var(--radius);
+    text-align: right;
+}
+
+.stat-mini span {
+    display: block;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+.stat-mini strong {
+    font-size: 1.15rem;
+    color: white;
+}
+
+.stat-mini.highlight strong {
+    color: #38bdf8;
+}
+
+.worker-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.worker-task-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-left: 5px solid var(--primary);
+}
+
+.worker-task-card.ready {
+    border-left-color: var(--success);
+}
+
+/* ==================== ТАБЛИЦЫ ==================== */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.data-table th, .data-table td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+}
+
+.data-table th {
+    background-color: var(--bg-page);
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+/* ==================== КНОПКИ ==================== */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -300,6 +826,14 @@ body {
     background: var(--success-hover);
 }
 
+.btn-warning {
+    background: var(--warning);
+    color: white;
+}
+.btn-warning:hover {
+    background: #d97706;
+}
+
 .btn-outline {
     background: transparent;
     border-color: var(--border);
@@ -315,24 +849,52 @@ body {
     font-size: 0.8rem;
 }
 
-/* Forms */
+.btn-xs {
+    padding: 0.22rem 0.55rem;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    line-height: 1.2;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+}
+.btn-link:hover {
+    color: var(--primary);
+}
+
+/* ==================== ФОРМЫ ==================== */
 .form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1.25rem;
-    margin-bottom: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.35rem;
 }
 
 label, .block-label {
-    font-size: 0.875rem;
+    font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-main);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    font-weight: normal;
 }
 
 input[type="text"],
@@ -340,15 +902,22 @@ input[type="password"],
 input[type="number"],
 input[type="tel"],
 input[type="date"],
+input[type="url"],
 select {
     padding: 0.65rem 0.9rem;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     font-size: 0.95rem;
     color: var(--text-main);
-    background: #fff;
+    background: var(--bg-card);
     outline: none;
     transition: border-color 0.15s;
+}
+
+input[type="tel"] {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.6px;
+    font-family: inherit;
 }
 
 input:focus, select:focus {
@@ -362,7 +931,7 @@ input:focus, select:focus {
 
 .services-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 0.75rem;
     margin-top: 0.5rem;
 }
@@ -396,6 +965,7 @@ input:focus, select:focus {
     align-items: center;
     padding-top: 1.25rem;
     border-top: 1px solid var(--border);
+    margin-top: 1.25rem;
 }
 
 .total-calc {
@@ -409,7 +979,7 @@ input:focus, select:focus {
     color: var(--primary);
 }
 
-/* Finance Grid */
+/* ==================== ФИНАНСЫ И НАСТРОЙКИ ==================== */
 .finance-stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -452,7 +1022,7 @@ input:focus, select:focus {
     gap: 1.5rem;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 820px) {
     .two-columns {
         grid-template-columns: 1fr;
     }
@@ -462,6 +1032,7 @@ input:focus, select:focus {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 1rem;
+    flex-wrap: wrap;
 }
 
 .items-list {
@@ -477,7 +1048,7 @@ input:focus, select:focus {
     font-size: 0.9rem;
 }
 
-/* Modals */
+/* ==================== МОДАЛЬНЫЕ ОКНА ==================== */
 .modal-backdrop {
     display: none;
     position: fixed;
@@ -495,19 +1066,40 @@ input:focus, select:focus {
 }
 
 .modal-window {
-    background: #fff;
+    background: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 1.75rem;
     max-width: 480px;
     width: 100%;
     box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
-.role-selector {
+.auth-modal-large {
+    max-width: 650px;
+}
+
+.sub-auth-block {
+    background: var(--bg-page);
+    padding: 1.25rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.role-grid-four {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
     margin-top: 1.25rem;
+}
+
+@media (max-width: 540px) {
+    .role-grid-four {
+        grid-template-columns: 1fr;
+    }
 }
 
 .role-card {
@@ -582,7 +1174,686 @@ input:focus, select:focus {
     margin-top: 1.5rem;
 }
 
-/* Visibility rules based on role */
-body.role-worker .owner-only {
-    display: none !important;
+.alert-box {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    margin: 1rem 0;
 }
+
+.alert-box.danger {
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+}
+
+.alert-box.success {
+    background: #dcfce7;
+    border: 1px solid #86efac;
+    color: #166534;
+}
+
+.new-bookings-banner {
+    background: #fef3c7;
+    border: 2px solid #f59e0b;
+    border-radius: var(--radius);
+    padding: 0.85rem 1.25rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+    transition: all 0.2s;
+}
+
+.new-bookings-banner:hover {
+    background: #fde68a;
+    border-color: #d97706;
+}
+
+/* ==================== QR-КОД И УТИЛИТЫ ==================== */
+.qr-display-box {
+    background: #ffffff;
+    padding: 0.85rem;
+    border-radius: 14px;
+    border: 2px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.qr-display-box img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+}
+
+.client-qr-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 680px) {
+    .hide-mobile {
+        display: none !important;
+    }
+}
+
+/* ==================== ТЕМНАЯ ТЕМА (DARK THEME) ==================== */
+[data-theme="dark"] {
+    --primary: #3b82f6;
+    --primary-hover: #60a5fa;
+    --primary-light: rgba(59, 130, 246, 0.2);
+    --success: #10b981;
+    --success-hover: #059669;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --purple: #a855f7;
+    --bg-page: #0b1120;
+    --bg-card: #1e293b;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border: #334155;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] body {
+    background-color: #070d18;
+    background-image: 
+        radial-gradient(circle at 15% 12%, rgba(37, 99, 235, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 85% 25%, rgba(14, 165, 233, 0.16) 0%, transparent 45%),
+        radial-gradient(circle at 50% 80%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
+        radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 100% 100%, 28px 28px;
+    background-attachment: fixed;
+    color: var(--text-main);
+}
+
+[data-theme="dark"] .app-header {
+    background: rgba(14, 23, 42, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .nav-tabs {
+    background: var(--bg-card);
+    border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .nav-tab {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .nav-tab:hover {
+    background: #334155;
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .nav-tab.active {
+    background: var(--primary);
+    color: #ffffff;
+}
+
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] input[type="tel"],
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="url"],
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] select:focus,
+[data-theme="dark"] textarea:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+}
+
+[data-theme="dark"] .card,
+[data-theme="dark"] .table-card {
+    background: var(--bg-card);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .highlight-card {
+    background: #1e293b;
+    border-color: #3b82f6;
+}
+
+[data-theme="dark"] .data-table th {
+    background-color: #0f172a;
+    color: #94a3b8;
+    border-bottom-color: var(--border);
+}
+
+[data-theme="dark"] .data-table td {
+    border-bottom-color: var(--border);
+    color: var(--text-main);
+}
+
+[data-theme="dark"] .data-table tbody tr:hover {
+    background-color: rgba(51, 65, 85, 0.4);
+}
+
+[data-theme="dark"] .modal-backdrop {
+    background: rgba(0, 0, 0, 0.75);
+}
+
+[data-theme="dark"] .modal-window {
+    background: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    box-shadow: 0 25px 35px -5px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .sub-auth-block,
+[data-theme="dark"] .role-card,
+[data-theme="dark"] .service-checkbox-card,
+[data-theme="dark"] .box-queue-item,
+[data-theme="dark"] .guest-result-box {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-theme="dark"] .role-card:hover {
+    border-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.15);
+}
+
+[data-theme="dark"] .role-card p {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .client-account-bar {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border-color: #334155;
+}
+
+[data-theme="dark"] .box-card {
+    background: var(--bg-card);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .box-status.free {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+}
+
+[data-theme="dark"] .box-status.busy {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .badge-queued {
+    background: #78350f;
+    color: #fde68a;
+}
+
+[data-theme="dark"] .badge-cloud {
+    background: #334155;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .badge-cloud.connected {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+}
+
+[data-theme="dark"] .status-pill.pending {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fde68a;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+[data-theme="dark"] .status-pill.waiting {
+    background: rgba(168, 85, 247, 0.2);
+    color: #e9d5ff;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+[data-theme="dark"] .status-pill.confirmed {
+    background: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="dark"] .status-pill.in-progress {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .status-pill.ready {
+    background: rgba(16, 185, 129, 0.25);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+[data-theme="dark"] .status-pill.paid {
+    background: #334155;
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .new-bookings-banner {
+    background: #78350f;
+    border-color: #f59e0b;
+}
+
+[data-theme="dark"] .new-bookings-banner strong {
+    color: #fde68a !important;
+}
+
+[data-theme="dark"] .new-bookings-banner p {
+    color: #fef3c7 !important;
+}
+
+[data-theme="dark"] .new-bookings-banner:hover {
+    background: #92400e;
+}
+
+[data-theme="dark"] .guest-plate-badge {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .guest-status-banner.in-progress {
+    background: rgba(59, 130, 246, 0.15);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .guest-status-banner.ready {
+    background: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7;
+}
+
+[data-theme="dark"] .pay-amount-box {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: #1e40af;
+}
+
+[data-theme="dark"] .pay-type-option {
+    border-color: #334155;
+}
+
+[data-theme="dark"] .pay-type-option:hover {
+    background: #334155;
+}
+
+[data-theme="dark"] .stat-card {
+    background: var(--bg-card);
+    border-color: var(--border);
+}
+
+[data-theme="dark"] .stat-card.highlight {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: #059669;
+}
+
+[data-theme="dark"] .stat-card h3 {
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .btn-outline {
+    border-color: #334155;
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .btn-outline:hover {
+    background: #334155;
+    border-color: #64748b;
+}
+
+/* ==================== ИНТЕРАКТИВНЫЙ SMS PUSH БАННЕР ==================== */
+.sms-push-banner {
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 440px;
+    background: rgba(15, 23, 42, 0.95);
+    color: #ffffff;
+    border-radius: 18px;
+    padding: 0.95rem 1.25rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 99999;
+    cursor: pointer;
+    animation: smsPushSlide 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+@keyframes smsPushSlide {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -35px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+    }
+}
+
+.sms-push-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.sms-push-app {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #38bdf8;
+}
+
+.sms-push-body {
+    font-size: 0.95rem;
+    line-height: 1.4;
+    color: #f8fafc;
+}
+
+.sms-push-code {
+    color: #4ade80;
+    font-size: 1.2rem;
+    letter-spacing: 3px;
+    font-weight: 800;
+    background: rgba(74, 222, 128, 0.18);
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    display: inline-block;
+    border: 1px solid rgba(74, 222, 128, 0.4);
+}
+
+/* ==================== ВКЛАДКИ ЕДИНОЙ АВТОРИЗАЦИИ ==================== */
+.client-modal-tabs {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.client-modal-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 0.65rem 0.5rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.client-modal-tab:hover {
+    color: var(--text-main);
+    background: var(--bg-page);
+}
+
+.client-modal-tab.active {
+    background: var(--primary);
+    color: #ffffff !important;
+}
+
+/* Таблица персонала */
+.staff-badge {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.staff-badge.owner { background: #fef3c7; color: #b45309; }
+.staff-badge.admin { background: #eff6ff; color: #1d4ed8; }
+.staff-badge.worker { background: #e0f2fe; color: #0369a1; }
+
+[data-theme="dark"] .staff-badge.owner { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+[data-theme="dark"] .staff-badge.admin { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
+[data-theme="dark"] .staff-badge.worker { background: rgba(14, 165, 233, 0.2); color: #7dd3fc; }
+
+/* ==================== ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКОВ (I18N) ==================== */
+.lang-switcher {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-page);
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    padding: 3px;
+    gap: 3px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.lang-btn {
+    border: none;
+    background: transparent;
+    padding: 4px 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1;
+    user-select: none;
+}
+
+.lang-btn:hover {
+    color: var(--text-main);
+}
+
+.lang-btn.active {
+    background: var(--primary);
+    color: #ffffff !important;
+    box-shadow: 0 1px 4px rgba(37, 99, 235, 0.35);
+}
+
+[data-theme="dark"] .lang-switcher {
+    background: rgba(15, 23, 42, 0.75);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ==================== КАРТОЧКА АВТОРИЗАЦИОННОГО ШЛЮЗА ==================== */
+.auth-gate-card {
+    text-align: center;
+    padding: 2.5rem 1.25rem;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.07), rgba(14, 165, 233, 0.07));
+    border: 2px dashed rgba(37, 99, 235, 0.35);
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .auth-gate-card {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(14, 165, 233, 0.1));
+    border-color: rgba(56, 189, 248, 0.3);
+}
+
+/* ==================== АДАПТИВНОСТЬ ДЛЯ СМАРТФОНОВ (MOBILE OPTIMIZATION) ==================== */
+@media (max-width: 768px) {
+    body {
+        padding-bottom: 5.5rem;
+    }
+
+    .app-header {
+        padding: 0.65rem 0.85rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .logo-area {
+        gap: 0.5rem;
+    }
+
+    .logo-icon {
+        font-size: 1.5rem;
+    }
+
+    .logo-title {
+        font-size: 1.05rem;
+    }
+
+    /* На смартфонах скрываем широкую надпись с датой, чтобы кнопки помещались аккуратно */
+    .shift-info {
+        display: none !important;
+    }
+
+    .header-actions {
+        gap: 0.4rem;
+        margin-left: auto;
+    }
+
+    .header-actions .btn {
+        padding: 0.45rem 0.65rem;
+        font-size: 0.85rem;
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .nav-tabs {
+        padding: 0.5rem 0.75rem;
+        gap: 0.4rem;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        position: sticky;
+        top: 60px;
+        z-index: 45;
+    }
+
+    .nav-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .nav-tab {
+        padding: 0.55rem 0.85rem;
+        font-size: 0.84rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+        border-radius: 9999px;
+    }
+
+    .main-content {
+        padding: 0.85rem 0.65rem;
+    }
+
+    .card {
+        padding: 1rem;
+        border-radius: 14px;
+        margin-bottom: 0.85rem;
+    }
+
+    /* 10 боксов на телефоне - аккуратная 2-колоночная сетка */
+    .ten-boxes-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.65rem !important;
+    }
+
+    .box-card {
+        padding: 0.75rem 0.6rem;
+    }
+
+    .box-header {
+        margin-bottom: 0.4rem;
+    }
+
+    .box-number {
+        font-size: 0.95rem;
+    }
+
+    .box-card .btn {
+        width: 100%;
+        padding: 0.5rem 0.25rem;
+        font-size: 0.8rem;
+        min-height: 40px;
+    }
+
+    /* Инпуты и формы - удобные для тапа, предотвращают авто-масштабирование на iOS */
+    input, select, textarea {
+        font-size: 16px !important;
+        min-height: 44px;
+    }
+
+    .form-group label {
+        font-size: 0.85rem;
+    }
+
+    /* Модальные окна */
+    .modal-backdrop {
+        padding: 0.5rem;
+        align-items: flex-end;
+    }
+
+    .modal-window {
+        padding: 1.25rem 1rem;
+        border-radius: 20px 20px 12px 12px;
+        max-height: 92vh;
+        width: 100%;
+    }
+
+    /* Таблицы с горизонтальным скроллом */
+    .table-responsive,
+    .data-table-container,
+    div:has(> .data-table) {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .data-table th, .data-table td {
+        padding: 0.6rem 0.5rem;
+        font-size: 0.82rem;
+        white-space: nowrap;
+    }
+
+    .client-account-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .client-actions-block {
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 420px) {
+    .ten-boxes-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .logo-title {
+        font-size: 0.95rem;
+    }
+    
+    .badge {
+        font-size: 0.7rem;
+    }
+}
+
+
