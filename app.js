@@ -426,8 +426,8 @@ const TRANSLATIONS = {
         authRequiredToBook: '🔒 Для онлайн-записи и добавления машины в очередь необходимо войти или зарегистрироваться!',
         authRequiredToAddCar: '🔒 Чтобы добавить автомобиль в гараж, пожалуйста, войдите в личный кабинет.',
 
-        qrModalTitle: '📱 QR-код для клиентов',
-        qrModalDesc: 'Наведите камеру любого смартфона на этот QR-код, чтобы моментально открыть автомойку, записаться онлайн и смотреть статус авто.',
+        qrModalTitle: '📱 QR-код автомойки для клиентов',
+        qrModalDesc: 'Покажите этот QR-код клиенту на стойке или распечатайте для зоны ожидания. Клиент сканирует код смартфоном и сразу переходит к онлайн-записи и проверке готовности авто.',
         qrPrintBtn: '🖨 Распечатать плакат А4',
         qrCopyBtn: '📋 Скопировать',
         btnClose: 'Закрыть',
@@ -637,7 +637,7 @@ const TRANSLATIONS = {
         authRequiredToAddCar: '🔒 Көлікті гаражға қосу үшін жеке кабинетке кіріңіз.',
 
         qrModalTitle: '📱 Клиенттерге арналған QR-код',
-        qrModalDesc: 'Автожууды ашып, онлайн жазылу және көлік күйін көру үшін кез келген смартфонның камерасын осы QR-кодқа бағыттаңыз.',
+        qrModalDesc: 'Бұл QR-кодты кассадағы клиентке көрсетіңіз немесе күту аймағына басып шығарыңыз. Клиент смартфонмен сканерлеп, онлайн жазылуға және көлік күйін көруге өтеді.',
         qrPrintBtn: '🖨 А4 плакатын басып шығару',
         qrCopyBtn: '📋 Көшіру',
         btnClose: 'Жабу',
@@ -847,7 +847,7 @@ const TRANSLATIONS = {
         authRequiredToAddCar: '🔒 Please sign in to your account before adding vehicles to your garage.',
 
         qrModalTitle: '📱 Client QR Code',
-        qrModalDesc: 'Point any smartphone camera at this QR code to instantly open the car wash app, book online, and check vehicle status.',
+        qrModalDesc: 'Show this QR code to visiting clients at the reception desk or print it as a poster for the waiting area. Clients scan it to book online and track their wash status.',
         qrPrintBtn: '🖨 Print A4 Poster',
         qrCopyBtn: '📋 Copy Link',
         btnClose: 'Close',
@@ -2796,6 +2796,12 @@ class CarWashApp {
         const clientBar = document.getElementById('clientAccountBar');
         if (clientBar) {
             clientBar.style.display = (this.currentRole === 'guest') ? 'flex' : 'none';
+        }
+
+        // Кнопка QR-кода в шапке доступна только администратору и владельцу (для предложения клиентам)
+        const qrHeaderBtn = document.getElementById('qrCodeHeaderBtn');
+        if (qrHeaderBtn) {
+            qrHeaderBtn.style.display = (this.currentRole === 'admin' || this.currentRole === 'owner') ? 'inline-flex' : 'none';
         }
 
         if (this.currentRole === 'guest') {

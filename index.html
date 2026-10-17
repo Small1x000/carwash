@@ -6,7 +6,7 @@
     <meta name="description" content="CarWash Tracker — профессиональная система управления автомойкой: 10 боксов, онлайн-бронирование, личный кабинет клиента, расчет заказов.">
     <title>CarWash Tracker | Управление автомойкой</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
-    <link rel="stylesheet" href="style.css?v=3.5">
+    <link rel="stylesheet" href="style.css?v=3.6">
     <script>
         (function() {
             var t = localStorage.getItem('carwash_theme');
@@ -49,7 +49,7 @@
                 <button class="btn btn-outline" id="themeToggleBtn" type="button" onclick="app.toggleTheme()" title="Переключить тему (Светлая / Темная)">
                     🌙 <span class="hide-mobile" id="themeToggleText">Тема</span>
                 </button>
-                <button class="btn btn-outline" id="qrCodeHeaderBtn" type="button" onclick="app.openQrModal()" title="QR-код сайта для клиентов">
+                <button class="btn btn-outline" id="qrCodeHeaderBtn" type="button" onclick="app.openQrModal()" title="Показать QR-код клиенту или распечатать" style="display:none;">
                     📱 <span class="hide-mobile" id="qrCodeHeaderText">QR-код</span>
                 </button>
                 <button class="btn btn-outline" id="switchUserBtn" type="button" onclick="app.handleAuthButtonClick()">
@@ -132,18 +132,6 @@
 
             <!-- Вкладка 1: Онлайн-запись и Мои бронирования -->
             <section id="tab-guestBooking" class="tab-content active" aria-labelledby="guestBookingTitle">
-                <!-- Баннер быстрого входа через QR-код для клиентов -->
-                <div class="card highlight-card client-qr-banner">
-                    <div style="display:flex; align-items:center; gap:0.75rem;">
-                        <span style="font-size:2rem;">📱</span>
-                        <div>
-                            <strong style="font-size:1rem;">Быстрый вход для клиентов через QR-код</strong>
-                            <div class="text-muted" style="font-size:0.85rem;">Откройте QR-код на экране, чтобы отсканировать камерой смартфона и сохранить автомойку</div>
-                        </div>
-                    </div>
-                    <button class="btn btn-outline btn-sm" type="button" onclick="app.openQrModal()">📱 Открыть QR-код</button>
-                </div>
-
                 <div class="two-columns">
                     <!-- Форма бронирования -->
                     <div class="card" id="bookingFormCard">
@@ -450,9 +438,14 @@
 
             <!-- 1. ВСЕ 10 БОКСОВ И ОЧЕРЕДЬ -->
             <section id="tab-activeOrders" class="tab-content" aria-labelledby="activeOrdersTitle">
-                <div class="section-header">
-                    <h2 data-i18n="status10BoxesTitle">Статус 10 боксов автомойки</h2>
-                    <span class="text-muted" data-i18n="status10BoxesHint">Нажмите на свободный бокс для быстрого запуска авто</span>
+                <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                    <div>
+                        <h2 data-i18n="status10BoxesTitle" style="margin-bottom:0.25rem;">Статус 10 боксов автомойки</h2>
+                        <span class="text-muted" data-i18n="status10BoxesHint">Нажмите на свободный бокс для быстрого запуска авто</span>
+                    </div>
+                    <button class="btn btn-outline btn-sm" type="button" onclick="app.openQrModal()" title="Показать QR-код клиенту или распечатать">
+                        📱 QR-код для клиентов
+                    </button>
                 </div>
 
                 <!-- Баннер новых онлайн-заявок для администратора и владельца -->
@@ -1191,11 +1184,11 @@
         <div class="modal-backdrop" id="qrModal" role="dialog" aria-modal="true" aria-labelledby="qrModalTitle">
             <div class="modal-window" style="text-align:center; max-width:440px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                    <h2 id="qrModalTitle" style="margin:0; font-size:1.25rem;" data-i18n="qrModalTitle">📱 QR-код для клиентов</h2>
+                    <h2 id="qrModalTitle" style="margin:0; font-size:1.25rem;" data-i18n="qrModalTitle">📱 QR-код автомойки для клиентов</h2>
                     <button class="btn-link" type="button" onclick="app.closeQrModal()" style="font-size:1.4rem; line-height:1;" title="Закрыть" data-i18n-title="btnClose">✕</button>
                 </div>
                 <p class="text-muted" style="font-size:0.85rem; margin-bottom:1.25rem;" data-i18n="qrModalDesc">
-                    Наведите камеру любого смартфона на этот QR-код, чтобы моментально открыть автомойку, записаться онлайн и смотреть статус авто.
+                    Покажите этот QR-код клиенту на стойке или распечатайте для зоны ожидания. Клиент сканирует код смартфоном и сразу переходит к онлайн-записи и проверке готовности авто.
                 </p>
                 
                 <div class="qr-display-box" style="margin-bottom:1.25rem; display:inline-block;">
@@ -1224,6 +1217,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
     <!-- Основной скрипт -->
-    <script src="app.js?v=3.5"></script>
+    <script src="app.js?v=3.6"></script>
 </body>
 </html>
