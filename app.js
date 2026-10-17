@@ -1070,14 +1070,21 @@ class CarWashApp {
 
     mergeClients(cloudClients) {
         if (!Array.isArray(cloudClients)) return;
+        const deletedSet = new Set(this.db.deletedClientPhones || []);
         const map = new Map();
-        // 1. Клиенты из облака
+        // 1. Клиенты из облака (пропускаем удаленных владельцем)
         cloudClients.forEach(c => {
-            if (c && c.id) map.set(c.id, c);
+            if (c && c.id) {
+                const clean = String(c.phone || '').replace(/\D/g, '').slice(-10);
+                if (clean && deletedSet.has(clean)) return; // Был удален владельцем!
+                map.set(c.id, c);
+            }
         });
         // 2. Локальные клиенты (чтобы недавно зарегистрированный клиент на этом устройстве не затерся)
         (this.db.clients || []).forEach(c => {
             if (c && c.id) {
+                const clean = String(c.phone || '').replace(/\D/g, '').slice(-10);
+                if (clean && deletedSet.has(clean)) return;
                 if (!map.has(c.id)) {
                     map.set(c.id, c);
                 } else {
@@ -1230,7 +1237,9 @@ class CarWashApp {
                 if (checkRes.ok) {
                     const checkData = await checkRes.json();
                     if (checkData) {
-                        if (Array.isArray(checkData.clients)) this.mergeClients(checkData.clients);
+                        if (this.sessionRole !== 'owner' && Array.isArray(checkData.clients)) {
+                            this.mergeClients(checkData.clients);
+                        }
                         if (Array.isArray(checkData.bookings)) this.mergeBookings(checkData.bookings);
                         if (Array.isArray(checkData.staff)) this.mergeStaff(checkData.staff);
                     }
@@ -1651,6 +1660,26 @@ class CarWashApp {
         if (last10.length < 10) {
             alert('Пожалуйста, введите корректный номер телефона (не менее 10 цифр).');
             phoneInput.focus();
+            return;
+        }
+
+        // Проверка: номер владельца
+        if (cleanDigits === '7765231041' || last10 === '765231041' || cleanDigits === '87765231041' || cleanDigits === '77765231041') {
+            alert('👑 Этот номер принадлежит главному аккаунту Владельца (Алимжан)!\nПожалуйста, выполните вход во вкладке «Вход».');
+            this.switchAuthTab('login');
+            const loginPhone = document.getElementById('unifiedLoginPhone');
+            if (loginPhone) loginPhone.value = this.formatPhoneNumber(rawPhone);
+            return;
+        }
+
+        // Проверка: номер сотрудника
+        const staffList = Array.isArray(this.db.staff) ? this.db.staff : [];
+        const staff = staffList.find(s => String(s.phone || '').replace(/\D/g, '').slice(-10) === last10);
+        if (staff) {
+            alert(`👤 Этот номер уже зарегистрирован как сотрудник (${staff.name})!\nПожалуйста, выполните вход во вкладке «Вход».`);
+            this.switchAuthTab('login');
+            const loginPhone = document.getElementById('unifiedLoginPhone');
+            if (loginPhone) loginPhone.value = this.formatPhoneNumber(rawPhone);
             return;
         }
 
@@ -5543,19 +5572,45 @@ class CarWashApp {
         });
     }
 
-    removeClient(clientId) {
+    async removeClient(clientId) {
         if (this.sessionRole !== 'owner') return;
         const client = (this.db.clients || []).find(c => c.id === clientId);
         const name = client ? client.name : 'клиента';
         if (!confirm(`Вы действительно хотите удалить ${name} из базы данных?`)) return;
 
+        if (client && client.phone) {
+            const clean = String(client.phone).replace(/\D/g, '').slice(-10);
+            if (!Array.isArray(this.db.deletedClientPhones)) this.db.deletedClientPhones = [];
+            if (clean && !this.db.deletedClientPhones.includes(clean)) {
+                this.db.deletedClientPhones.push(clean);
+            }
+        }
+
         this.db.clients = (this.db.clients || []).filter(c => c.id !== clientId);
         this.saveDatabase();
+
+        // Немедленно обновляем в облаке Firebase
+        if (this.db.cloud && this.db.cloud.firebaseUrl) {
+            try {
+                const baseUrl = this.db.cloud.firebaseUrl.replace(/\/$/, '');
+                await fetch(baseUrl + '/carwash_sync/clients.json', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(this.db.clients)
+                });
+                await fetch(baseUrl + '/carwash_sync.json', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ clients: this.db.clients, updatedAt: Date.now() })
+                });
+            } catch (e) {}
+        }
+
         this.renderClientsTable();
         alert('Клиент успешно удален из базы данных.');
     }
 
-    clearAllTestClients() {
+    async clearAllTestClients() {
         if (this.sessionRole !== 'owner') return;
         const count = (this.db.clients || []).length;
         if (count === 0) {
@@ -5567,10 +5622,46 @@ class CarWashApp {
             return;
         }
 
+        if (!Array.isArray(this.db.deletedClientPhones)) this.db.deletedClientPhones = [];
+        (this.db.clients || []).forEach(c => {
+            const clean = String(c.phone || '').replace(/\D/g, '').slice(-10);
+            if (clean && !this.db.deletedClientPhones.includes(clean)) {
+                this.db.deletedClientPhones.push(clean);
+            }
+        });
+
         this.db.clients = [];
+        this.currentClient = null;
+        try {
+            localStorage.removeItem('carwash_client_session_v2');
+            sessionStorage.removeItem('carwash_client_session_v2');
+        } catch (e) {}
+
         this.saveDatabase();
+
+        // Немедленно стираем в облаке Firebase
+        if (this.db.cloud && this.db.cloud.firebaseUrl) {
+            try {
+                const baseUrl = this.db.cloud.firebaseUrl.replace(/\/$/, '');
+                await fetch(baseUrl + '/carwash_sync/clients.json', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify([])
+                });
+                await fetch(baseUrl + '/carwash_sync.json', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ clients: [], updatedAt: Date.now() })
+                });
+                await fetch(baseUrl + '/carwash_db/clients.json', { method: 'DELETE' });
+            } catch (e) {
+                console.warn('[Cloud Delete] Error wiping clients in cloud:', e);
+            }
+        }
+
         this.renderClientsTable();
-        alert(`✅ Все тестовые клиенты (${count} чел.) успешно удалены из базы данных!\nАккаунт Владельца (7765231041) в безопасности.`);
+        this.renderClientAccountBar();
+        alert(`✅ Все тестовые клиенты (${count} чел.) успешно и навсегда удалены из базы данных и облака!\nАккаунт Владельца (7765231041) в безопасности.`);
     }
 
     async addAdmin(e) {
